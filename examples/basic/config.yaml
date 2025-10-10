@@ -1,0 +1,46 @@
+storagex:
+  # Storage provider (currently only "s3" is supported)
+  provider: s3
+  
+  # S3 bucket name
+  bucket: storagex-test
+  
+  # AWS region (for AWS S3)
+  region: us-east-1
+  
+  # Custom endpoint (for MinIO or other S3-compatible services)
+  endpoint: http://localhost:9000
+  
+  # Use path-style addressing (true for MinIO)
+  use_path_style: true
+  
+  # Access credentials
+  access_key: minioadmin
+  secret_key: minioadmin
+  
+  # Optional session token for temporary credentials
+  session_token: ""
+  
+  # Request timeout
+  request_timeout: 30s
+  
+  # Retry configuration
+  max_retries: 3
+  backoff_initial: 200ms
+  backoff_max: 5s
+  
+  # Multipart upload defaults
+  default_part_size: 8388608  # 8MB in bytes
+  default_parallel: 4
+  
+  # Multi-tenant prefix template (optional)
+  # Examples:
+  # base_prefix: "org/{org_id}/workspace/{workspace_id}"
+  # base_prefix: "tenant/%s"
+  base_prefix: ""
+  
+  # SSL configuration
+  disable_ssl: true  # true for local MinIO
+  
+  # Enable detailed logging
+  enable_logging: true

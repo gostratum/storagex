@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: storagex-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until /usr/bin/mc config host add minio http://minio:9000 minioadmin minioadmin; do echo 'Waiting for MinIO to be ready...' && sleep 1; done;
+      /usr/bin/mc mb minio/test-bucket;
+      /usr/bin/mc mb minio/storagex-test;
+      /usr/bin/mc mb minio/examples;
+      /usr/bin/mc policy set public minio/test-bucket;
+      echo 'MinIO buckets created successfully';
+      "
+
+  # Alternative: Localstack (if you prefer AWS emulation)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: storagex-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DATA_DIR=/tmp/localstack/data
+      - HOSTNAME_EXTERNAL=localhost
+    volumes:
+      - localstack_data:/tmp/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    profiles:
+      - localstack
+
+volumes:
+  minio_data:
+    driver: local
+  localstack_data:
+    driver: local
+
+networks:
+  default:
+    name: storagex-network
