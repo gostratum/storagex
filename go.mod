@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.58.3
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/google/uuid v1.6.0
-	github.com/gostratum/core v0.1.4
+	github.com/gostratum/core v0.1.5
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/fx v1.24.0
 )

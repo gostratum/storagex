@@ -1,7 +1,4 @@
-//go:build integration
-// +build integration
-
-package test
+package storagex_test
 
 import (
 	"bytes"
