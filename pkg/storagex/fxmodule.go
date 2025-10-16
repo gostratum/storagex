@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gostratum/core/configx"
 	"go.uber.org/fx"
 )
 
@@ -18,16 +19,6 @@ var Module = fx.Module("storage",
 	fx.Invoke(registerLifecycle),
 )
 
-// ConfigParams defines the parameters needed for config creation
-type ConfigParams struct {
-	fx.In
-
-	// Optional config unmarshaler. Accepts any value implementing
-	// ConfigUnmarshaler (for example a *configx.Config). If nil, a default
-	// configx-backed instance will be created.
-	Unmarshaler ConfigUnmarshaler `optional:"true"`
-}
-
 // StorageParams defines the parameters needed for storage creation
 type StorageParams struct {
 	fx.In
@@ -37,31 +28,11 @@ type StorageParams struct {
 	KeyBuilder KeyBuilder `optional:"true"`
 }
 
-// NewConfig creates a new configuration from a provided config provider
-// or returns an error if none is supplied. Callers should provide a
-// `ConfigUnmarshaler` (for example a *configx.Config) via DI using
-// `ConfigFromConfigX`.
-func NewConfig(params ConfigParams) (*Config, error) {
-	var unmarshaler ConfigUnmarshaler
-	if params.Unmarshaler != nil {
-		unmarshaler = params.Unmarshaler
-	} else {
-		// Lazily create a default configx-backed instance. We avoid importing
-		// a concrete configx symbol here to keep this package decoupled; in
-		// practice callers will supply an instance via ConfigFromConfigX.
-		// However, to preserve current behavior we try to construct one if
-		// available at runtime via the package (optional).
-		// If configx is not available at build time, callers must supply an
-		// unmarshaler via DI.
-		type configxNewer interface{ New() any }
-		_ = configxNewer(nil) // no-op to document intent
-
-		return nil, fmt.Errorf("no config provider supplied - please provide a ConfigUnmarshaler via DI (use ConfigFromConfigX)")
-	}
-
+// NewConfig creates a new configuration from the configx loader
+func NewConfig(loader configx.Loader) (*Config, error) {
 	cfg := DefaultConfig()
-	if err := unmarshaler.Unmarshal(cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	if err := loader.Bind(cfg); err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// Sanitize and validate
@@ -72,10 +43,6 @@ func NewConfig(params ConfigParams) (*Config, error) {
 
 	return cfg, nil
 }
-
-// NOTE: Configuration loading (defaults, files, env bindings) should be
-// handled by the supplied provider (for example a *configx.Config). The
-// module itself performs sanitization and validation after unmarshalling.
 
 // NewStorage creates a new Storage implementation
 // This is a factory function that needs to be implemented by storage providers
@@ -198,15 +165,6 @@ func NewTestKeyBuilder() KeyBuilder {
 	return NewPrefixKeyBuilder("test")
 }
 
-// ConfigFromConfigX provides a concrete *configx.Config to the DI container.
-// The module will use this instance to unmarshal the storage config.
-// ConfigFromConfigX supplies any concrete config provider (for example,
-// a *configx.Config) to the DI container. The supplied value must implement
-// ConfigUnmarshaler.
-func ConfigFromConfigX(c any) fx.Option {
-	return fx.Supply(c)
-}
-
 // WithCustomKeyBuilder provides a custom key builder to the DI container
 func WithCustomKeyBuilder(kb KeyBuilder) fx.Option {
 	return fx.Supply(kb)
@@ -245,7 +203,7 @@ func NewModuleWithOptions(opts ModuleOptions) fx.Option {
 		providers = append(providers, fx.Invoke(registerLifecycle))
 	}
 
-	return fx.Module("storagex", providers...)
+	return fx.Module("storage", providers...)
 }
 
 // Example usage documentation
@@ -286,12 +244,12 @@ With custom configuration:
 
 	func main() {
 		c := configx.New()
-		c.Set("storagex.bucket", "my-bucket")
-		c.Set("storagex.endpoint", "http://localhost:9000")
+		c.Set("storage.bucket", "my-bucket")
+		c.Set("storage.endpoint", "http://localhost:9000")
 
 		app := fx.New(
 			storagex.Module,
-			storagex.ConfigFromConfigX(c),
+			fx.Supply(c), // configx.Loader is automatically injected
 			fx.Invoke(useStorage),
 		)
 

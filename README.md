@@ -424,7 +424,6 @@ By default the tests expect configuration from environment variables. The module
 now accepts a pluggable config provider (we commonly use `github.com/gostratum/core/configx`).
 If you need to run the example or tests with a custom configuration, create a
 `configx` instance, set keys (or bind env/files) and supply it to the module via
-DI using `storagex.ConfigFromConfigX(c)`.
 
 Example in code:
 
@@ -437,7 +436,6 @@ func main() {
 
     app := fx.New(
         storagex.Module,
-        storagex.ConfigFromConfigX(c),
         fx.Invoke(useStorage),
     )
     // ...
@@ -524,7 +522,6 @@ func main() {
 
     app := fx.New(
         storagex.Module,
-        storagex.ConfigFromConfigX(c),
         storagex.WithCustomLogger(customLogger),
         fx.Invoke(useStorage),
     )

@@ -52,6 +52,11 @@ func (e *StorageError) Unwrap() error {
 	return e.Err
 }
 
+// IsNotFound checks if an error is or wraps ErrNotFound
+func IsNotFound(err error) bool {
+	return errors.Is(err, ErrNotFound)
+}
+
 // PutOptions configures object storage operations
 type PutOptions struct {
 	// ContentType specifies the MIME type of the object

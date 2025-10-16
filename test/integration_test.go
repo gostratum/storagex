@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gostratum/core/configx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -24,56 +23,27 @@ func TestS3Integration(t *testing.T) {
 		t.Skip("Skipping integration tests - set RUN_INTEGRATION_TESTS=true to run")
 	}
 
-	// Prefer using configx to build the typed config
-	c := configx.New()
-
-	// Populate configx with environment variables (configx should support
-	// reading env automatically or via helpers; we also set explicit keys so
-	// defaults are present for test runs)
-	// Using 'storage' prefix to match Config.Prefix() method
-	c.Set("storage.provider", getEnvOrDefault("STRATUM_STORAGE_PROVIDER", "s3"))
-	c.Set("storage.bucket", getEnvOrDefault("STRATUM_STORAGE_BUCKET", "test-bucket"))
-	c.Set("storage.region", getEnvOrDefault("STRATUM_STORAGE_REGION", "us-east-1"))
-	c.Set("storage.endpoint", getEnvOrDefault("STRATUM_STORAGE_ENDPOINT", ""))
-	c.Set("storage.access_key", getEnvOrDefault("STRATUM_STORAGE_ACCESS_KEY", ""))
-	c.Set("storage.secret_key", getEnvOrDefault("STRATUM_STORAGE_SECRET_KEY", ""))
-	if getEnvOrDefault("STRATUM_STORAGE_USE_PATH_STYLE", "false") == "true" {
-		c.Set("storage.use_path_style", true)
-	}
-	if getEnvOrDefault("STRATUM_STORAGE_DISABLE_SSL", "false") == "true" {
-		c.Set("storage.disable_ssl", true)
-	}
-	if getEnvOrDefault("STRATUM_STORAGE_ENABLE_LOGGING", "false") == "true" {
-		c.Set("storage.enable_logging", true)
+	// Build config directly from environment variables
+	// This is a standalone test, not using FX, so we construct config manually
+	cfg := &storagex.Config{
+		Provider:       getEnvOrDefault("STRATUM_STORAGE_PROVIDER", "s3"),
+		Bucket:         getEnvOrDefault("STRATUM_STORAGE_BUCKET", "test-bucket"),
+		Region:         getEnvOrDefault("STRATUM_STORAGE_REGION", "us-east-1"),
+		Endpoint:       getEnvOrDefault("STRATUM_STORAGE_ENDPOINT", ""),
+		AccessKey:      getEnvOrDefault("STRATUM_STORAGE_ACCESS_KEY", ""),
+		SecretKey:      getEnvOrDefault("STRATUM_STORAGE_SECRET_KEY", ""),
+		UsePathStyle:   getEnvOrDefault("STRATUM_STORAGE_USE_PATH_STYLE", "false") == "true",
+		DisableSSL:     getEnvOrDefault("STRATUM_STORAGE_DISABLE_SSL", "false") == "true",
+		EnableLogging:  getEnvOrDefault("STRATUM_STORAGE_ENABLE_LOGGING", "false") == "true",
+		RequestTimeout: 30 * time.Second,
+		MaxRetries:     3,
 	}
 
-	cfg := storagex.DefaultConfig()
-	// Use configx to unmarshal into the typed config using Prefix() method
-	if err := c.Unmarshal(cfg); err != nil {
-		// Fallback: manual construction (should rarely happen)
-		cfg = &storagex.Config{
-			Provider:       getEnvOrDefault("STRATUM_STORAGE_PROVIDER", "s3"),
-			Bucket:         getEnvOrDefault("STRATUM_STORAGE_BUCKET", "test-bucket"),
-			Region:         getEnvOrDefault("STRATUM_STORAGE_REGION", "us-east-1"),
-			Endpoint:       getEnvOrDefault("STRATUM_STORAGE_ENDPOINT", ""),
-			AccessKey:      getEnvOrDefault("STRATUM_STORAGE_ACCESS_KEY", ""),
-			SecretKey:      getEnvOrDefault("STRATUM_STORAGE_SECRET_KEY", ""),
-			UsePathStyle:   getEnvOrDefault("STRATUM_STORAGE_USE_PATH_STYLE", "false") == "true",
-			DisableSSL:     getEnvOrDefault("STRATUM_STORAGE_DISABLE_SSL", "false") == "true",
-			EnableLogging:  getEnvOrDefault("STRATUM_STORAGE_ENABLE_LOGGING", "false") == "true",
-			RequestTimeout: 30 * time.Second,
-			MaxRetries:     3,
-		}
-	}
-
-	// Sanitize and validate config
-	cfg = storagex.SanitizeConfig(cfg)
+	// Validate config
 	err := storagex.ValidateConfig(cfg)
 	require.NoError(t, err, "Config should be valid")
 
-	// Create storage using defaults. Tests may supply a custom logger via
-	// WithCustomLogger if desired; by default the module will use a no-op
-	// logger when logging is disabled or no logger is supplied.
+	// Create storage instance
 	ctx := context.Background()
 	storage, err := storagex.NewStorageFromConfig(ctx, cfg)
 	require.NoError(t, err, "Should create storage successfully")

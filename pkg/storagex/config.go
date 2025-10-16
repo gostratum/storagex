@@ -2,8 +2,6 @@ package storagex
 
 import (
 	"time"
-
-	"github.com/gostratum/core/configx"
 )
 
 // Config holds all storage configuration options
@@ -80,11 +78,22 @@ func DefaultConfig() *Config {
 	}
 }
 
-// NewConfig creates a new Config from the configuration loader
-func NewConfig(loader configx.Loader) (*Config, error) {
+// NewConfigFromLoader creates a Config using the standard configx.Loader pattern.
+// This is useful for standalone usage without FX dependency injection.
+// For FX-based applications, use the Module which provides NewConfig automatically.
+func NewConfigFromLoader(loader interface {
+	Unmarshal(interface{}) error
+}) (*Config, error) {
 	cfg := DefaultConfig()
-	if err := loader.Bind(cfg); err != nil {
+	if err := loader.Unmarshal(cfg); err != nil {
 		return nil, err
 	}
+
+	// Sanitize and validate
+	cfg = SanitizeConfig(cfg)
+	if err := ValidateConfig(cfg); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }

@@ -69,7 +69,16 @@ func (kb *PrefixKeyBuilder) StripKey(fullKey string) string {
 
 // buildPrefix constructs the prefix from the template and context
 func (kb *PrefixKeyBuilder) buildPrefix(context map[string]string) string {
-	if kb.BasePrefix == "" || context == nil {
+	if kb.BasePrefix == "" {
+		return ""
+	}
+
+	// If no context provided and prefix has no placeholders, use prefix as-is
+	if context == nil {
+		// Check if prefix contains placeholders
+		if !strings.Contains(kb.BasePrefix, "{") && !strings.Contains(kb.BasePrefix, "%s") {
+			return kb.BasePrefix
+		}
 		return ""
 	}
 
