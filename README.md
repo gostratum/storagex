@@ -117,30 +117,32 @@ StorageX supports configuration via **environment variables**, **YAML files**, a
 
 ### Environment Variables
 
+All configuration can be set via environment variables with the `STRATUM_STORAGE_` prefix:
+
 ```bash
 # S3 Configuration
-export STORAGEX_PROVIDER=s3
-export STORAGEX_BUCKET=my-bucket
-export STORAGEX_REGION=us-east-1
-export STORAGEX_ACCESS_KEY=your-access-key
-export STORAGEX_SECRET_KEY=your-secret-key
+export STRATUM_STORAGE_PROVIDER=s3
+export STRATUM_STORAGE_BUCKET=my-bucket
+export STRATUM_STORAGE_REGION=us-east-1
+export STRATUM_STORAGE_ACCESS_KEY=your-access-key
+export STRATUM_STORAGE_SECRET_KEY=your-secret-key
 
 # MinIO Configuration  
-export STORAGEX_ENDPOINT=http://localhost:9000
-export STORAGEX_USE_PATH_STYLE=true
-export STORAGEX_DISABLE_SSL=true
+export STRATUM_STORAGE_ENDPOINT=http://localhost:9000
+export STRATUM_STORAGE_USE_PATH_STYLE=true
+export STRATUM_STORAGE_DISABLE_SSL=true
 
 # Performance Tuning
-export STORAGEX_REQUEST_TIMEOUT=30s
-export STORAGEX_MAX_RETRIES=3
-export STORAGEX_DEFAULT_PART_SIZE=8388608  # 8MB
-export STORAGEX_DEFAULT_PARALLEL=4
+export STRATUM_STORAGE_REQUEST_TIMEOUT=30s
+export STRATUM_STORAGE_MAX_RETRIES=3
+export STRATUM_STORAGE_DEFAULT_PART_SIZE=8388608  # 8MB
+export STRATUM_STORAGE_DEFAULT_PARALLEL=4
 
 # Multi-tenant Support
-export STORAGEX_BASE_PREFIX="org/{org_id}/workspace/{workspace_id}"
+export STRATUM_STORAGE_BASE_PREFIX="org/{org_id}/workspace/{workspace_id}"
 
 # Logging
-export STORAGEX_ENABLE_LOGGING=true
+export STRATUM_STORAGE_ENABLE_LOGGING=true
 ```
 
 ### YAML Configuration
@@ -148,7 +150,7 @@ export STORAGEX_ENABLE_LOGGING=true
 Create `config.yaml`:
 
 ```yaml
-storagex:
+storage:
   provider: s3
   bucket: my-bucket
   region: us-east-1
@@ -169,23 +171,23 @@ storagex:
 
 | Setting | Environment Variable | Default | Description |
 |---------|---------------------|---------|-------------|
-| `provider` | `STORAGEX_PROVIDER` | `"s3"` | Storage backend (`s3` only) |
-| `bucket` | `STORAGEX_BUCKET` | **required** | S3 bucket name |
-| `region` | `STORAGEX_REGION` | `"us-east-1"` | AWS region |
-| `endpoint` | `STORAGEX_ENDPOINT` | `""` | Custom endpoint (MinIO/etc) |
-| `use_path_style` | `STORAGEX_USE_PATH_STYLE` | `false` | Path-style URLs (true for MinIO) |
-| `access_key` | `STORAGEX_ACCESS_KEY` | **required** | AWS access key |
-| `secret_key` | `STORAGEX_SECRET_KEY` | **required** | AWS secret key |
-| `session_token` | `STORAGEX_SESSION_TOKEN` | `""` | AWS session token (STS) |
-| `request_timeout` | `STORAGEX_REQUEST_TIMEOUT` | `30s` | Request timeout |
-| `max_retries` | `STORAGEX_MAX_RETRIES` | `3` | Maximum retry attempts |
-| `backoff_initial` | `STORAGEX_BACKOFF_INITIAL` | `200ms` | Initial retry delay |
-| `backoff_max` | `STORAGEX_BACKOFF_MAX` | `5s` | Maximum retry delay |
-| `default_part_size` | `STORAGEX_DEFAULT_PART_SIZE` | `8388608` | Multipart size (bytes) |
-| `default_parallel` | `STORAGEX_DEFAULT_PARALLEL` | `4` | Multipart concurrency |
-| `base_prefix` | `STORAGEX_BASE_PREFIX` | `""` | Multi-tenant prefix template |
-| `disable_ssl` | `STORAGEX_DISABLE_SSL` | `false` | Disable SSL (local only) |
-| `enable_logging` | `STORAGEX_ENABLE_LOGGING` | `false` | Enable debug logging |
+| `provider` | `STRATUM_STORAGE_PROVIDER` | `"s3"` | Storage backend (`s3` only) |
+| `bucket` | `STRATUM_STORAGE_BUCKET` | **required** | S3 bucket name |
+| `region` | `STRATUM_STORAGE_REGION` | `"us-east-1"` | AWS region |
+| `endpoint` | `STRATUM_STORAGE_ENDPOINT` | `""` | Custom endpoint (MinIO/etc) |
+| `use_path_style` | `STRATUM_STORAGE_USE_PATH_STYLE` | `false` | Path-style URLs (true for MinIO) |
+| `access_key` | `STRATUM_STORAGE_ACCESS_KEY` | **required** | AWS access key |
+| `secret_key` | `STRATUM_STORAGE_SECRET_KEY` | **required** | AWS secret key |
+| `session_token` | `STRATUM_STORAGE_SESSION_TOKEN` | `""` | AWS session token (STS) |
+| `request_timeout` | `STRATUM_STORAGE_REQUEST_TIMEOUT` | `30s` | Request timeout |
+| `max_retries` | `STRATUM_STORAGE_MAX_RETRIES` | `3` | Maximum retry attempts |
+| `backoff_initial` | `STRATUM_STORAGE_BACKOFF_INITIAL` | `200ms` | Initial retry delay |
+| `backoff_max` | `STRATUM_STORAGE_BACKOFF_MAX` | `5s` | Maximum retry delay |
+| `default_part_size` | `STRATUM_STORAGE_DEFAULT_PART_SIZE` | `8388608` | Multipart size (bytes) |
+| `default_parallel` | `STRATUM_STORAGE_DEFAULT_PARALLEL` | `4` | Multipart concurrency |
+| `base_prefix` | `STRATUM_STORAGE_BASE_PREFIX` | `""` | Multi-tenant prefix template |
+| `disable_ssl` | `STRATUM_STORAGE_DISABLE_SSL` | `false` | Disable SSL (local only) |
+| `enable_logging` | `STRATUM_STORAGE_ENABLE_LOGGING` | `false` | Enable debug logging |
 
 ## API Reference
 
@@ -469,7 +471,7 @@ make logs
 ### Connection Tuning
 
 ```yaml
-storagex:
+storage:
   request_timeout: 60s      # For large files
   max_retries: 5           # High reliability
   backoff_max: 30s         # Longer backoff
@@ -481,23 +483,23 @@ storagex:
 ### AWS S3 Production
 
 ```bash
-export STORAGEX_PROVIDER=s3
-export STORAGEX_REGION=us-west-2
-export STORAGEX_BUCKET=my-prod-bucket
-export STORAGEX_ACCESS_KEY=AKIA...
-export STORAGEX_SECRET_KEY=...
+export STRATUM_STORAGE_PROVIDER=s3
+export STRATUM_STORAGE_REGION=us-west-2
+export STRATUM_STORAGE_BUCKET=my-prod-bucket
+export STRATUM_STORAGE_ACCESS_KEY=AKIA...
+export STRATUM_STORAGE_SECRET_KEY=...
 # Use IAM roles in production instead of keys
 ```
 
 ### MinIO Development
 
 ```bash  
-export STORAGEX_ENDPOINT=http://localhost:9000
-export STORAGEX_USE_PATH_STYLE=true
-export STORAGEX_ACCESS_KEY=minioadmin
-export STORAGEX_SECRET_KEY=minioadmin
-export STORAGEX_DISABLE_SSL=true
-export STORAGEX_BUCKET=dev-bucket
+export STRATUM_STORAGE_ENDPOINT=http://localhost:9000
+export STRATUM_STORAGE_USE_PATH_STYLE=true
+export STRATUM_STORAGE_ACCESS_KEY=minioadmin
+export STRATUM_STORAGE_SECRET_KEY=minioadmin
+export STRATUM_STORAGE_DISABLE_SSL=true
+export STRATUM_STORAGE_BUCKET=dev-bucket
 ```
 
 ### Other S3-Compatible Services

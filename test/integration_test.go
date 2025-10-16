@@ -30,36 +30,37 @@ func TestS3Integration(t *testing.T) {
 	// Populate configx with environment variables (configx should support
 	// reading env automatically or via helpers; we also set explicit keys so
 	// defaults are present for test runs)
-	c.Set("storagex.provider", getEnvOrDefault("STORAGEX_PROVIDER", "s3"))
-	c.Set("storagex.bucket", getEnvOrDefault("STORAGEX_BUCKET", "test-bucket"))
-	c.Set("storagex.region", getEnvOrDefault("STORAGEX_REGION", "us-east-1"))
-	c.Set("storagex.endpoint", getEnvOrDefault("STORAGEX_ENDPOINT", ""))
-	c.Set("storagex.access_key", getEnvOrDefault("STORAGEX_ACCESS_KEY", ""))
-	c.Set("storagex.secret_key", getEnvOrDefault("STORAGEX_SECRET_KEY", ""))
-	if getEnvOrDefault("STORAGEX_USE_PATH_STYLE", "false") == "true" {
-		c.Set("storagex.use_path_style", true)
+	// Using 'storage' prefix to match Config.Prefix() method
+	c.Set("storage.provider", getEnvOrDefault("STRATUM_STORAGE_PROVIDER", "s3"))
+	c.Set("storage.bucket", getEnvOrDefault("STRATUM_STORAGE_BUCKET", "test-bucket"))
+	c.Set("storage.region", getEnvOrDefault("STRATUM_STORAGE_REGION", "us-east-1"))
+	c.Set("storage.endpoint", getEnvOrDefault("STRATUM_STORAGE_ENDPOINT", ""))
+	c.Set("storage.access_key", getEnvOrDefault("STRATUM_STORAGE_ACCESS_KEY", ""))
+	c.Set("storage.secret_key", getEnvOrDefault("STRATUM_STORAGE_SECRET_KEY", ""))
+	if getEnvOrDefault("STRATUM_STORAGE_USE_PATH_STYLE", "false") == "true" {
+		c.Set("storage.use_path_style", true)
 	}
-	if getEnvOrDefault("STORAGEX_DISABLE_SSL", "false") == "true" {
-		c.Set("storagex.disable_ssl", true)
+	if getEnvOrDefault("STRATUM_STORAGE_DISABLE_SSL", "false") == "true" {
+		c.Set("storage.disable_ssl", true)
 	}
-	if getEnvOrDefault("STORAGEX_ENABLE_LOGGING", "false") == "true" {
-		c.Set("storagex.enable_logging", true)
+	if getEnvOrDefault("STRATUM_STORAGE_ENABLE_LOGGING", "false") == "true" {
+		c.Set("storage.enable_logging", true)
 	}
 
 	cfg := storagex.DefaultConfig()
-	// Use configx to unmarshal into the typed config
+	// Use configx to unmarshal into the typed config using Prefix() method
 	if err := c.Unmarshal(cfg); err != nil {
 		// Fallback: manual construction (should rarely happen)
 		cfg = &storagex.Config{
-			Provider:       getEnvOrDefault("STORAGEX_PROVIDER", "s3"),
-			Bucket:         getEnvOrDefault("STORAGEX_BUCKET", "test-bucket"),
-			Region:         getEnvOrDefault("STORAGEX_REGION", "us-east-1"),
-			Endpoint:       getEnvOrDefault("STORAGEX_ENDPOINT", ""),
-			AccessKey:      getEnvOrDefault("STORAGEX_ACCESS_KEY", ""),
-			SecretKey:      getEnvOrDefault("STORAGEX_SECRET_KEY", ""),
-			UsePathStyle:   getEnvOrDefault("STORAGEX_USE_PATH_STYLE", "false") == "true",
-			DisableSSL:     getEnvOrDefault("STORAGEX_DISABLE_SSL", "false") == "true",
-			EnableLogging:  getEnvOrDefault("STORAGEX_ENABLE_LOGGING", "false") == "true",
+			Provider:       getEnvOrDefault("STRATUM_STORAGE_PROVIDER", "s3"),
+			Bucket:         getEnvOrDefault("STRATUM_STORAGE_BUCKET", "test-bucket"),
+			Region:         getEnvOrDefault("STRATUM_STORAGE_REGION", "us-east-1"),
+			Endpoint:       getEnvOrDefault("STRATUM_STORAGE_ENDPOINT", ""),
+			AccessKey:      getEnvOrDefault("STRATUM_STORAGE_ACCESS_KEY", ""),
+			SecretKey:      getEnvOrDefault("STRATUM_STORAGE_SECRET_KEY", ""),
+			UsePathStyle:   getEnvOrDefault("STRATUM_STORAGE_USE_PATH_STYLE", "false") == "true",
+			DisableSSL:     getEnvOrDefault("STRATUM_STORAGE_DISABLE_SSL", "false") == "true",
+			EnableLogging:  getEnvOrDefault("STRATUM_STORAGE_ENABLE_LOGGING", "false") == "true",
 			RequestTimeout: 30 * time.Second,
 			MaxRetries:     3,
 		}

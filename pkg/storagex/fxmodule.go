@@ -8,7 +8,7 @@ import (
 )
 
 // Module is the Fx module that provides storage functionality
-var Module = fx.Module("storagex",
+var Module = fx.Module("storage",
 	fx.Provide(
 		NewConfig,
 		NewStorage,
