@@ -42,7 +42,7 @@ func main() {
 }
 
 // runDemo demonstrates all storage operations
-func runDemo(storage storagex.Storage, logger *zap.Logger) {
+func runDemo(storage storagex.Storage, logger storagex.Logger) {
 	ctx := context.Background()
 
 	logger.Info("Starting StorageX demo")
@@ -75,7 +75,7 @@ func runDemo(storage storagex.Storage, logger *zap.Logger) {
 }
 
 // demonstrateBasicOps shows basic CRUD operations
-func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger *zap.Logger) error {
+func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
 	logger.Info("=== Basic Operations Demo ===")
 
 	// Test data
@@ -157,7 +157,7 @@ func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger *
 }
 
 // demonstrateMultipartUpload shows large file upload
-func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, logger *zap.Logger) error {
+func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
 	logger.Info("=== Multipart Upload Demo ===")
 
 	// Create a large test file in memory (10MB)
@@ -218,7 +218,7 @@ func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, l
 }
 
 // demonstratePresignedURLs shows presigned URL generation
-func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, logger *zap.Logger) error {
+func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
 	logger.Info("=== Presigned URLs Demo ===")
 
 	testKey := "demo/presigned-test.txt"
@@ -276,7 +276,7 @@ func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, log
 }
 
 // demonstrateBatchOps shows batch operations
-func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger *zap.Logger) error {
+func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
 	logger.Info("=== Batch Operations Demo ===")
 
 	// Create multiple test files

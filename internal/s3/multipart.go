@@ -22,7 +22,7 @@ type MultipartUploader struct {
 	storage *S3Storage
 	client  *s3.Client
 	bucket  string
-	logger  *zap.Logger
+	logger  storagex.Logger
 }
 
 // NewMultipartUploader creates a new multipart uploader

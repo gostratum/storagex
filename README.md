@@ -113,7 +113,7 @@ func useStorage(storage storagex.Storage) {
 
 ## Configuration
 
-StorageX supports configuration via **environment variables**, **YAML files**, and **Viper**.
+StorageX supports configuration via **environment variables**, **YAML files**, and pluggable configuration providers.
 
 ### Environment Variables
 
@@ -418,6 +418,30 @@ make test-integration
 make down
 ```
 
+By default the tests expect configuration from environment variables. The module
+now accepts a pluggable config provider (we commonly use `github.com/gostratum/core/configx`).
+If you need to run the example or tests with a custom configuration, create a
+`configx` instance, set keys (or bind env/files) and supply it to the module via
+DI using `storagex.ConfigFromConfigX(c)`.
+
+Example in code:
+
+```go
+import "github.com/gostratum/core/configx"
+
+func main() {
+    c := configx.New()
+    c.Set("storagex.bucket", "my-test-bucket")
+
+    app := fx.New(
+        storagex.Module,
+        storagex.ConfigFromConfigX(c),
+        fx.Invoke(useStorage),
+    )
+    // ...
+}
+```
+
 ### Manual Testing
 
 ```bash
@@ -490,15 +514,15 @@ StorageX works with any S3-compatible service:
 ### Custom Dependency Injection
 
 ```go
-import "github.com/spf13/viper"
+import "github.com/gostratum/core/configx"
 
 func main() {
-    v := viper.New()
-    v.Set("storagex.bucket", "custom-bucket")
-    
+    c := configx.New()
+    c.Set("storagex.bucket", "custom-bucket")
+
     app := fx.New(
         storagex.Module,
-        storagex.ConfigFromViper(v),
+        storagex.ConfigFromConfigX(c),
         storagex.WithCustomLogger(customLogger),
         fx.Invoke(useStorage),
     )

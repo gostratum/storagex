@@ -81,7 +81,7 @@ func DefaultConfig() *Config {
 
 // Options holds functional options for customizing storage behavior
 type Options struct {
-	logger     *zap.Logger
+	logger     Logger
 	keyBuilder KeyBuilder
 	clock      func() time.Time
 }
@@ -90,9 +90,18 @@ type Options struct {
 type Option func(*Options)
 
 // WithLogger sets a custom logger
-func WithLogger(logger *zap.Logger) Option {
+// WithLogger sets a custom logger implementing the storagex Logger adapter.
+func WithLogger(logger Logger) Option {
 	return func(opts *Options) {
 		opts.logger = logger
+	}
+}
+
+// WithZapLogger is a convenience wrapper to accept a *zap.Logger and wrap it
+// into the storagex Logger adapter. This preserves backward compatibility.
+func WithZapLogger(z *zap.Logger) Option {
+	return func(opts *Options) {
+		opts.logger = WrapZapLogger(z)
 	}
 }
 
@@ -113,7 +122,7 @@ func WithClock(clock func() time.Time) Option {
 // applyDefaults applies default values to unset options
 func (opts *Options) applyDefaults() {
 	if opts.logger == nil {
-		opts.logger = zap.NewNop()
+		opts.logger = NewNopLogger()
 	}
 	if opts.keyBuilder == nil {
 		opts.keyBuilder = &PrefixKeyBuilder{}
@@ -124,9 +133,9 @@ func (opts *Options) applyDefaults() {
 }
 
 // GetLogger returns the configured logger
-func (opts *Options) GetLogger() *zap.Logger {
+func (opts *Options) GetLogger() Logger {
 	if opts.logger == nil {
-		return zap.NewNop()
+		return NewNopLogger()
 	}
 	return opts.logger
 }

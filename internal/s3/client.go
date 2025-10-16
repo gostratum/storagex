@@ -22,7 +22,7 @@ import (
 // ClientConfig holds the configuration for creating S3 clients
 type ClientConfig struct {
 	Config *storagex.Config
-	Logger *zap.Logger
+	Logger storagex.Logger
 }
 
 // ClientManager manages S3 client instances and configurations
@@ -30,7 +30,7 @@ type ClientManager struct {
 	s3Client      *s3.Client
 	presignClient *s3.PresignClient
 	config        *storagex.Config
-	logger        *zap.Logger
+	logger        storagex.Logger
 }
 
 // NewClientManager creates a new S3 client manager
@@ -40,7 +40,7 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 	}
 
 	if clientConfig.Logger == nil {
-		clientConfig.Logger = zap.NewNop()
+		clientConfig.Logger = storagex.NewNopLogger()
 	}
 
 	cfg := clientConfig.Config
@@ -103,7 +103,7 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 }
 
 // buildAWSConfig creates the AWS SDK configuration
-func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger *zap.Logger) (aws.Config, error) {
+func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger storagex.Logger) (aws.Config, error) {
 	var options []func(*config.LoadOptions) error
 
 	// Set region
@@ -206,7 +206,7 @@ func (cm *ClientManager) GetConfig() *storagex.Config {
 }
 
 // GetLogger returns the logger instance
-func (cm *ClientManager) GetLogger() *zap.Logger {
+func (cm *ClientManager) GetLogger() storagex.Logger {
 	return cm.logger
 }
 

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gostratum/core/configx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -24,33 +25,60 @@ func TestS3Integration(t *testing.T) {
 		t.Skip("Skipping integration tests - set RUN_INTEGRATION_TESTS=true to run")
 	}
 
-	// Create config from environment variables
-	config := &storagex.Config{
-		Provider:       getEnvOrDefault("STORAGEX_PROVIDER", "s3"),
-		Bucket:         getEnvOrDefault("STORAGEX_BUCKET", "test-bucket"),
-		Region:         getEnvOrDefault("STORAGEX_REGION", "us-east-1"),
-		Endpoint:       getEnvOrDefault("STORAGEX_ENDPOINT", ""),
-		AccessKey:      getEnvOrDefault("STORAGEX_ACCESS_KEY", ""),
-		SecretKey:      getEnvOrDefault("STORAGEX_SECRET_KEY", ""),
-		UsePathStyle:   getEnvOrDefault("STORAGEX_USE_PATH_STYLE", "false") == "true",
-		DisableSSL:     getEnvOrDefault("STORAGEX_DISABLE_SSL", "false") == "true",
-		EnableLogging:  getEnvOrDefault("STORAGEX_ENABLE_LOGGING", "false") == "true",
-		RequestTimeout: 30 * time.Second,
-		MaxRetries:     3,
+	// Prefer using configx to build the typed config
+	c := configx.New()
+
+	// Populate configx with environment variables (configx should support
+	// reading env automatically or via helpers; we also set explicit keys so
+	// defaults are present for test runs)
+	c.Set("storagex.provider", getEnvOrDefault("STORAGEX_PROVIDER", "s3"))
+	c.Set("storagex.bucket", getEnvOrDefault("STORAGEX_BUCKET", "test-bucket"))
+	c.Set("storagex.region", getEnvOrDefault("STORAGEX_REGION", "us-east-1"))
+	c.Set("storagex.endpoint", getEnvOrDefault("STORAGEX_ENDPOINT", ""))
+	c.Set("storagex.access_key", getEnvOrDefault("STORAGEX_ACCESS_KEY", ""))
+	c.Set("storagex.secret_key", getEnvOrDefault("STORAGEX_SECRET_KEY", ""))
+	if getEnvOrDefault("STORAGEX_USE_PATH_STYLE", "false") == "true" {
+		c.Set("storagex.use_path_style", true)
+	}
+	if getEnvOrDefault("STORAGEX_DISABLE_SSL", "false") == "true" {
+		c.Set("storagex.disable_ssl", true)
+	}
+	if getEnvOrDefault("STORAGEX_ENABLE_LOGGING", "false") == "true" {
+		c.Set("storagex.enable_logging", true)
 	}
 
-	// Validate config
-	err := storagex.ValidateConfig(config)
+	cfg := storagex.DefaultConfig()
+	// Use configx to unmarshal into the typed config
+	if err := c.Unmarshal(cfg); err != nil {
+		// Fallback: manual construction (should rarely happen)
+		cfg = &storagex.Config{
+			Provider:       getEnvOrDefault("STORAGEX_PROVIDER", "s3"),
+			Bucket:         getEnvOrDefault("STORAGEX_BUCKET", "test-bucket"),
+			Region:         getEnvOrDefault("STORAGEX_REGION", "us-east-1"),
+			Endpoint:       getEnvOrDefault("STORAGEX_ENDPOINT", ""),
+			AccessKey:      getEnvOrDefault("STORAGEX_ACCESS_KEY", ""),
+			SecretKey:      getEnvOrDefault("STORAGEX_SECRET_KEY", ""),
+			UsePathStyle:   getEnvOrDefault("STORAGEX_USE_PATH_STYLE", "false") == "true",
+			DisableSSL:     getEnvOrDefault("STORAGEX_DISABLE_SSL", "false") == "true",
+			EnableLogging:  getEnvOrDefault("STORAGEX_ENABLE_LOGGING", "false") == "true",
+			RequestTimeout: 30 * time.Second,
+			MaxRetries:     3,
+		}
+	}
+
+	// Sanitize and validate config
+	cfg = storagex.SanitizeConfig(cfg)
+	err := storagex.ValidateConfig(cfg)
 	require.NoError(t, err, "Config should be valid")
 
 	// Create logger
-	logger, err := zap.NewDevelopment()
+	zapLogger, err := zap.NewDevelopment()
 	require.NoError(t, err)
 
-	// Create storage
+	// Create storage using adapter wrapper
 	ctx := context.Background()
-	storage, err := storagex.NewStorageFromConfig(ctx, config,
-		storagex.WithLogger(logger))
+	storage, err := storagex.NewStorageFromConfig(ctx, cfg,
+		storagex.WithLogger(storagex.WrapZapLogger(zapLogger)))
 	require.NoError(t, err, "Should create storage successfully")
 
 	t.Run("BasicOperations", func(t *testing.T) {

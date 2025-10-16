@@ -279,12 +279,12 @@ func SanitizeConfig(cfg *Config) *Config {
 }
 
 // ConfigSummary returns a safe summary of the configuration for logging
-func ConfigSummary(cfg *Config) map[string]interface{} {
+func ConfigSummary(cfg *Config) map[string]any {
 	if cfg == nil {
-		return map[string]interface{}{"error": "nil config"}
+		return map[string]any{"error": "nil config"}
 	}
 
-	summary := map[string]interface{}{
+	summary := map[string]any{
 		"provider":          cfg.Provider,
 		"bucket":            cfg.Bucket,
 		"region":            cfg.Region,

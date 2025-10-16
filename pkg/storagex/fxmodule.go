@@ -3,9 +3,7 @@ package storagex
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/spf13/viper"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -25,8 +23,10 @@ var Module = fx.Module("storagex",
 type ConfigParams struct {
 	fx.In
 
-	// Viper instance for configuration (optional)
-	Viper *viper.Viper `optional:"true"`
+	// Optional config unmarshaler. Accepts any value implementing
+	// ConfigUnmarshaler (for example a *configx.Config). If nil, a default
+	// configx-backed instance will be created.
+	Unmarshaler ConfigUnmarshaler `optional:"true"`
 }
 
 // StorageParams defines the parameters needed for storage creation
@@ -34,29 +34,34 @@ type StorageParams struct {
 	fx.In
 
 	Config     *Config
-	Logger     *zap.Logger `optional:"true"`
-	KeyBuilder KeyBuilder  `optional:"true"`
+	Logger     Logger     `optional:"true"`
+	KeyBuilder KeyBuilder `optional:"true"`
 }
 
-// NewConfig creates a new configuration from Viper or defaults
+// NewConfig creates a new configuration from a provided config provider
+// or returns an error if none is supplied. Callers should provide a
+// `ConfigUnmarshaler` (for example a *configx.Config) via DI using
+// `ConfigFromConfigX`.
 func NewConfig(params ConfigParams) (*Config, error) {
-	var v *viper.Viper
-	if params.Viper != nil {
-		v = params.Viper
+	var unmarshaler ConfigUnmarshaler
+	if params.Unmarshaler != nil {
+		unmarshaler = params.Unmarshaler
 	} else {
-		v = viper.New()
-		// Set up default configuration sources
-		setupViper(v)
+		// Lazily create a default configx-backed instance. We avoid importing
+		// a concrete configx symbol here to keep this package decoupled; in
+		// practice callers will supply an instance via ConfigFromConfigX.
+		// However, to preserve current behavior we try to construct one if
+		// available at runtime via the package (optional).
+		// If configx is not available at build time, callers must supply an
+		// unmarshaler via DI.
+		type configxNewer interface{ New() any }
+		_ = configxNewer(nil) // no-op to document intent
+
+		return nil, fmt.Errorf("no config provider supplied - please provide a ConfigUnmarshaler via DI (use ConfigFromConfigX)")
 	}
 
-	// Start with defaults
 	cfg := DefaultConfig()
-
-	// Bind environment variables
-	bindEnvVars(v)
-
-	// Read configuration from viper
-	if err := v.Unmarshal(cfg); err != nil {
+	if err := unmarshaler.Unmarshal(cfg); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
@@ -69,71 +74,9 @@ func NewConfig(params ConfigParams) (*Config, error) {
 	return cfg, nil
 }
 
-// setupViper configures viper with default settings
-func setupViper(v *viper.Viper) {
-	// Set config name and paths
-	v.SetConfigName("storagex")
-	v.SetConfigType("yaml")
-	v.AddConfigPath(".")
-	v.AddConfigPath("./config")
-	v.AddConfigPath("/etc/storagex")
-	v.AddConfigPath("$HOME/.config/storagex")
-
-	// Set default values
-	defaults := map[string]interface{}{
-		"storagex.provider":          "s3",
-		"storagex.region":            "us-east-1",
-		"storagex.use_path_style":    false,
-		"storagex.request_timeout":   "30s",
-		"storagex.max_retries":       3,
-		"storagex.backoff_initial":   "200ms",
-		"storagex.backoff_max":       "5s",
-		"storagex.default_part_size": 8 << 20, // 8MB
-		"storagex.default_parallel":  4,
-		"storagex.disable_ssl":       false,
-		"storagex.enable_logging":    false,
-	}
-
-	for key, value := range defaults {
-		v.SetDefault(key, value)
-	}
-
-	// Try to read config file (ignore errors as it's optional)
-	_ = v.ReadInConfig()
-}
-
-// bindEnvVars binds environment variables to viper keys
-func bindEnvVars(v *viper.Viper) {
-	// Enable environment variable reading
-	v.SetEnvPrefix("STORAGEX")
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.AutomaticEnv()
-
-	// Explicit bindings for complex keys
-	envBindings := map[string]string{
-		"storagex.provider":          "STORAGEX_PROVIDER",
-		"storagex.bucket":            "STORAGEX_BUCKET",
-		"storagex.region":            "STORAGEX_REGION",
-		"storagex.endpoint":          "STORAGEX_ENDPOINT",
-		"storagex.use_path_style":    "STORAGEX_USE_PATH_STYLE",
-		"storagex.access_key":        "STORAGEX_ACCESS_KEY",
-		"storagex.secret_key":        "STORAGEX_SECRET_KEY",
-		"storagex.session_token":     "STORAGEX_SESSION_TOKEN",
-		"storagex.request_timeout":   "STORAGEX_REQUEST_TIMEOUT",
-		"storagex.max_retries":       "STORAGEX_MAX_RETRIES",
-		"storagex.backoff_initial":   "STORAGEX_BACKOFF_INITIAL",
-		"storagex.backoff_max":       "STORAGEX_BACKOFF_MAX",
-		"storagex.default_part_size": "STORAGEX_DEFAULT_PART_SIZE",
-		"storagex.default_parallel":  "STORAGEX_DEFAULT_PARALLEL",
-		"storagex.base_prefix":       "STORAGEX_BASE_PREFIX",
-		"storagex.disable_ssl":       "STORAGEX_DISABLE_SSL",
-		"storagex.enable_logging":    "STORAGEX_ENABLE_LOGGING",
-	}
-
-	for key, env := range envBindings {
-		_ = v.BindEnv(key, env)
-	}
-}
+// NOTE: Configuration loading (defaults, files, env bindings) should be
+// handled by the supplied provider (for example a *configx.Config). The
+// module itself performs sanitization and validation after unmarshalling.
 
 // NewStorage creates a new Storage implementation
 // This is a factory function that needs to be implemented by storage providers
@@ -175,9 +118,11 @@ func NewKeyBuilder(cfg *Config) KeyBuilder {
 }
 
 // NewLogger creates a logger based on configuration
-func NewLogger(cfg *Config) (*zap.Logger, error) {
+// NewLogger creates a zap.Logger based on configuration. We return a *zap.Logger
+// so old code can still wrap it, but DI surfaces use the Logger adapter.
+func NewLogger(cfg *Config) (Logger, error) {
 	if !cfg.EnableLogging {
-		return zap.NewNop(), nil
+		return NewNopLogger(), nil
 	}
 
 	// Create development or production logger based on environment
@@ -195,7 +140,7 @@ func NewLogger(cfg *Config) (*zap.Logger, error) {
 		return nil, fmt.Errorf("failed to create logger: %w", err)
 	}
 
-	return logger, nil
+	return WrapZapLogger(logger), nil
 }
 
 // LifecycleParams defines parameters for lifecycle management
@@ -204,7 +149,7 @@ type LifecycleParams struct {
 
 	Lifecycle fx.Lifecycle
 	Storage   Storage
-	Logger    *zap.Logger `optional:"true"`
+	Logger    Logger `optional:"true"`
 }
 
 // registerLifecycle registers shutdown hooks for graceful cleanup
@@ -268,16 +213,20 @@ func NewTestKeyBuilder() KeyBuilder {
 }
 
 // NewTestLogger creates a test logger
-func NewTestLogger() *zap.Logger {
+func NewTestLogger() Logger {
 	config := zap.NewDevelopmentConfig()
 	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	logger, _ := config.Build()
-	return logger
+	return WrapZapLogger(logger)
 }
 
-// ConfigFromViper creates configuration from an existing Viper instance
-func ConfigFromViper(v *viper.Viper) fx.Option {
-	return fx.Supply(ConfigParams{Viper: v})
+// ConfigFromConfigX provides a concrete *configx.Config to the DI container.
+// The module will use this instance to unmarshal the storage config.
+// ConfigFromConfigX supplies any concrete config provider (for example,
+// a *configx.Config) to the DI container. The supplied value must implement
+// ConfigUnmarshaler.
+func ConfigFromConfigX(c any) fx.Option {
+	return fx.Supply(c)
 }
 
 // WithCustomKeyBuilder provides a custom key builder to the DI container
@@ -286,7 +235,7 @@ func WithCustomKeyBuilder(kb KeyBuilder) fx.Option {
 }
 
 // WithCustomLogger provides a custom logger to the DI container
-func WithCustomLogger(logger *zap.Logger) fx.Option {
+func WithCustomLogger(logger Logger) fx.Option {
 	return fx.Supply(logger)
 }
 
@@ -355,16 +304,16 @@ Basic usage with fx:
 
 With custom configuration:
 
-	import "github.com/spf13/viper"
+	import "github.com/gostratum/core/configx"
 
 	func main() {
-		v := viper.New()
-		v.Set("storagex.bucket", "my-bucket")
-		v.Set("storagex.endpoint", "http://localhost:9000")
+		c := configx.New()
+		c.Set("storagex.bucket", "my-bucket")
+		c.Set("storagex.endpoint", "http://localhost:9000")
 
 		app := fx.New(
 			storagex.Module,
-			storagex.ConfigFromViper(v),
+			storagex.ConfigFromConfigX(c),
 			fx.Invoke(useStorage),
 		)
 

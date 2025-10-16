@@ -21,7 +21,7 @@ import (
 type S3Storage struct {
 	client     *ClientManager
 	keyBuilder storagex.KeyBuilder
-	logger     *zap.Logger
+	logger     storagex.Logger
 }
 
 // NewS3Storage creates a new S3 storage implementation
