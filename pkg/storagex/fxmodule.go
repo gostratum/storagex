@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 // Module is the Fx module that provides storage functionality
@@ -117,30 +116,18 @@ func NewKeyBuilder(cfg *Config) KeyBuilder {
 	return NewPrefixKeyBuilder(cfg.BasePrefix)
 }
 
-// NewLogger creates a logger based on configuration
-// NewLogger creates a zap.Logger based on configuration. We return a *zap.Logger
-// so old code can still wrap it, but DI surfaces use the Logger adapter.
+// NewLogger creates a logger based on configuration.
+// The concrete logger implementation is provided by the application; this
+// function returns a storagex.Logger adapter. Currently we return a no-op
+// logger until a concrete gostratum/core logger is wired here.
 func NewLogger(cfg *Config) (Logger, error) {
 	if !cfg.EnableLogging {
 		return NewNopLogger(), nil
 	}
-
-	// Create development or production logger based on environment
-	config := zap.NewProductionConfig()
-
-	// Configure based on storage config
-	if cfg.IsMinIO() || cfg.Endpoint != "" {
-		// Development settings for local/MinIO
-		config = zap.NewDevelopmentConfig()
-		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	}
-
-	logger, err := config.Build()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create logger: %w", err)
-	}
-
-	return WrapZapLogger(logger), nil
+	// TODO: create and return a gostratum/core logger instance here.
+	// For now return a no-op logger to keep behavior consistent until
+	// we wire the concrete core logger factory.
+	return NewNopLogger(), nil
 }
 
 // LifecycleParams defines parameters for lifecycle management
@@ -170,7 +157,7 @@ func registerLifecycle(params LifecycleParams) {
 			if closer, ok := params.Storage.(interface{ Close() error }); ok {
 				if err := closer.Close(); err != nil {
 					if params.Logger != nil {
-						params.Logger.Error("Error closing storage", zap.Error(err))
+						params.Logger.Error("Error closing storage", "error", err)
 					}
 					return err
 				}
@@ -190,7 +177,6 @@ var TestModule = fx.Module("storagex-test",
 		NewTestConfig,
 		NewStorage,
 		NewTestKeyBuilder,
-		NewTestLogger,
 	),
 )
 
@@ -210,14 +196,6 @@ func NewTestConfig() *Config {
 // NewTestKeyBuilder creates a test key builder
 func NewTestKeyBuilder() KeyBuilder {
 	return NewPrefixKeyBuilder("test")
-}
-
-// NewTestLogger creates a test logger
-func NewTestLogger() Logger {
-	config := zap.NewDevelopmentConfig()
-	config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	logger, _ := config.Build()
-	return WrapZapLogger(logger)
 }
 
 // ConfigFromConfigX provides a concrete *configx.Config to the DI container.

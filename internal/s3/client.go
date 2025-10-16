@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/cenkalti/backoff/v4"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/storagex/pkg/storagex"
 )
@@ -47,10 +46,10 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 	logger := clientConfig.Logger
 
 	logger.Debug("Creating S3 client manager",
-		zap.String("bucket", cfg.Bucket),
-		zap.String("region", cfg.Region),
-		zap.String("endpoint", cfg.Endpoint),
-		zap.Bool("use_path_style", cfg.UsePathStyle))
+		"bucket", cfg.Bucket,
+		"region", cfg.Region,
+		"endpoint", cfg.Endpoint,
+		"use_path_style", cfg.UsePathStyle)
 
 	// Create AWS config
 	awsConfig, err := buildAWSConfig(ctx, cfg, logger)
@@ -96,8 +95,8 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 	}
 
 	logger.Info("S3 client manager created successfully",
-		zap.String("bucket", cfg.Bucket),
-		zap.String("region", cfg.Region))
+		"bucket", cfg.Bucket,
+		"region", cfg.Region)
 
 	return manager, nil
 }
@@ -137,8 +136,8 @@ func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger storagex.L
 	}
 
 	logger.Debug("AWS config loaded",
-		zap.String("region", awsConfig.Region),
-		zap.Int("max_retries", cfg.MaxRetries))
+		"region", awsConfig.Region,
+		"max_retries", cfg.MaxRetries)
 
 	return awsConfig, nil
 }
@@ -179,13 +178,13 @@ func (cm *ClientManager) validateConnection(ctx context.Context) error {
 
 	if err != nil {
 		cm.logger.Warn("Failed to validate bucket access",
-			zap.String("bucket", cm.config.Bucket),
-			zap.Error(err))
+			"bucket", cm.config.Bucket,
+			"error", err)
 		return fmt.Errorf("cannot access bucket %q: %w", cm.config.Bucket, err)
 	}
 
 	cm.logger.Debug("Bucket access validated",
-		zap.String("bucket", cm.config.Bucket))
+		"bucket", cm.config.Bucket)
 
 	return nil
 }
@@ -246,11 +245,11 @@ func (cm *ClientManager) CreateBucketIfNotExists(ctx context.Context) error {
 	}
 
 	if exists {
-		cm.logger.Debug("Bucket already exists", zap.String("bucket", cm.config.Bucket))
+		cm.logger.Debug("Bucket already exists", "bucket", cm.config.Bucket)
 		return nil
 	}
 
-	cm.logger.Info("Creating bucket", zap.String("bucket", cm.config.Bucket))
+	cm.logger.Info("Creating bucket", "bucket", cm.config.Bucket)
 
 	input := &s3.CreateBucketInput{
 		Bucket: aws.String(cm.config.Bucket),
@@ -268,7 +267,7 @@ func (cm *ClientManager) CreateBucketIfNotExists(ctx context.Context) error {
 		return fmt.Errorf("failed to create bucket %q: %w", cm.config.Bucket, err)
 	}
 
-	cm.logger.Info("Bucket created successfully", zap.String("bucket", cm.config.Bucket))
+	cm.logger.Info("Bucket created successfully", "bucket", cm.config.Bucket)
 	return nil
 }
 

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // Config holds all storage configuration options
@@ -97,11 +95,21 @@ func WithLogger(logger Logger) Option {
 	}
 }
 
-// WithZapLogger is a convenience wrapper to accept a *zap.Logger and wrap it
-// into the storagex Logger adapter. This preserves backward compatibility.
-func WithZapLogger(z *zap.Logger) Option {
+// WithCoreLogger is a convenience wrapper to accept a core logger and wrap it
+// into the storagex Logger adapter. This preserves backward compatibility for
+// callers using github.com/gostratum/core/logger.
+func WithCoreLogger(l interface{}) Option {
 	return func(opts *Options) {
-		opts.logger = WrapZapLogger(z)
+		// If the provided logger matches the expected coreLogger interface,
+		// wrap it. Otherwise, ignore and leave the default logger.
+		if cl, ok := l.(interface {
+			Debug(string, ...interface{})
+			Info(string, ...interface{})
+			Warn(string, ...interface{})
+			Error(string, ...interface{})
+		}); ok {
+			opts.logger = WrapCoreLogger(cl)
+		}
 	}
 }
 

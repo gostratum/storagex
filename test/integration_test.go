@@ -14,7 +14,6 @@ import (
 	"github.com/gostratum/core/configx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 
 	_ "github.com/gostratum/storagex/internal/s3" // Register S3 implementation
 	"github.com/gostratum/storagex/pkg/storagex"
@@ -71,14 +70,11 @@ func TestS3Integration(t *testing.T) {
 	err := storagex.ValidateConfig(cfg)
 	require.NoError(t, err, "Config should be valid")
 
-	// Create logger
-	zapLogger, err := zap.NewDevelopment()
-	require.NoError(t, err)
-
-	// Create storage using adapter wrapper
+	// Create storage using defaults. Tests may supply a custom logger via
+	// WithCustomLogger if desired; by default the module will use a no-op
+	// logger when logging is disabled or no logger is supplied.
 	ctx := context.Background()
-	storage, err := storagex.NewStorageFromConfig(ctx, cfg,
-		storagex.WithLogger(storagex.WrapZapLogger(zapLogger)))
+	storage, err := storagex.NewStorageFromConfig(ctx, cfg)
 	require.NoError(t, err, "Should create storage successfully")
 
 	t.Run("BasicOperations", func(t *testing.T) {

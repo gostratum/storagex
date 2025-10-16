@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/storagex/pkg/storagex"
 )
@@ -56,10 +55,10 @@ func (s *S3Storage) MultipartUpload(ctx context.Context, key string, src io.Read
 	}
 
 	s.logger.Info("Starting multipart upload",
-		zap.String("key", key),
-		zap.String("upload_token", cfg.UploadToken),
-		zap.Int64("part_size_mb", cfg.PartSizeBytes/(1<<20)),
-		zap.Int("concurrency", cfg.Concurrency))
+		"key", key,
+		"upload_token", cfg.UploadToken,
+		"part_size_mb", cfg.PartSizeBytes/(1<<20),
+		"concurrency", cfg.Concurrency)
 
 	uploader := NewMultipartUploader(s)
 	return uploader.Upload(ctx, key, src, cfg, putOpts)
@@ -80,9 +79,9 @@ func (mu *MultipartUploader) Upload(ctx context.Context, key string, src io.Read
 		if err != nil {
 			if abortErr := mu.storage.AbortMultipart(ctx, key, uploadID); abortErr != nil {
 				mu.logger.Warn("Failed to abort multipart upload",
-					zap.String("key", key),
-					zap.String("upload_id", uploadID),
-					zap.Error(abortErr))
+					"key", key,
+					"upload_id", uploadID,
+					"error", abortErr)
 			}
 		}
 	}()
@@ -105,10 +104,10 @@ func (mu *MultipartUploader) Upload(ctx context.Context, key string, src io.Read
 	}
 
 	mu.logger.Info("Multipart upload completed successfully",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID),
-		zap.Int("parts", len(parts)),
-		zap.Int64("size", stat.Size))
+		"key", key,
+		"upload_id", uploadID,
+		"parts", len(parts),
+		"size", stat.Size)
 
 	return stat, nil
 }
@@ -147,8 +146,8 @@ func (mu *MultipartUploader) uploadParts(ctx context.Context, storageKey, upload
 		if result.err != nil {
 			uploadErr = result.err
 			mu.logger.Error("Part upload failed",
-				zap.Int32("part_number", result.partNumber),
-				zap.Error(result.err))
+				"part_number", result.partNumber,
+				"error", result.err)
 			break
 		}
 
@@ -159,9 +158,9 @@ func (mu *MultipartUploader) uploadParts(ctx context.Context, storageKey, upload
 
 		atomic.AddInt32(&partCount, 1)
 		mu.logger.Debug("Part uploaded successfully",
-			zap.Int32("part_number", result.partNumber),
-			zap.String("etag", result.etag),
-			zap.Int32("total_parts", partCount))
+			"part_number", result.partNumber,
+			"etag", result.etag,
+			"total_parts", partCount)
 	}
 
 	if uploadErr != nil {
@@ -233,7 +232,7 @@ func (mu *MultipartUploader) chunkReader(ctx context.Context, src io.Reader, par
 		default:
 			n, err := io.ReadFull(src, buffer)
 			if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-				mu.logger.Error("Error reading from source", zap.Error(err))
+				mu.logger.Error("Error reading from source", "error", err)
 				return
 			}
 
@@ -285,8 +284,8 @@ func (s *S3Storage) CreateMultipart(ctx context.Context, key string, putOpts *st
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Creating multipart upload",
-		zap.String("key", key),
-		zap.String("storage_key", storageKey))
+		"key", key,
+		"storage_key", storageKey)
 
 	input := &s3.CreateMultipartUploadInput{
 		Bucket: aws.String(s.client.GetConfig().Bucket),
@@ -319,8 +318,8 @@ func (s *S3Storage) CreateMultipart(ctx context.Context, key string, putOpts *st
 
 	uploadID := aws.ToString(output.UploadId)
 	s.logger.Debug("Multipart upload created",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID))
+		"key", key,
+		"upload_id", uploadID)
 
 	return uploadID, nil
 }
@@ -330,10 +329,10 @@ func (s *S3Storage) UploadPart(ctx context.Context, key, uploadID string, partNu
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Uploading part",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID),
-		zap.Int32("part_number", partNumber),
-		zap.Int64("size", size))
+		"key", key,
+		"upload_id", uploadID,
+		"part_number", partNumber,
+		"size", size)
 
 	// Read the part data
 	data, err := io.ReadAll(part)
@@ -360,9 +359,9 @@ func (s *S3Storage) UploadPart(ctx context.Context, key, uploadID string, partNu
 
 	etag := aws.ToString(output.ETag)
 	s.logger.Debug("Part uploaded successfully",
-		zap.String("key", key),
-		zap.Int32("part_number", partNumber),
-		zap.String("etag", etag))
+		"key", key,
+		"part_number", partNumber,
+		"etag", etag)
 
 	return etag, nil
 }
@@ -372,9 +371,9 @@ func (s *S3Storage) CompleteMultipart(ctx context.Context, key, uploadID string,
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Completing multipart upload",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID),
-		zap.Int("parts", len(etags)))
+		"key", key,
+		"upload_id", uploadID,
+		"parts", len(etags))
 
 	// Build completed parts
 	parts := make([]types.CompletedPart, len(etags))
@@ -412,10 +411,10 @@ func (s *S3Storage) CompleteMultipart(ctx context.Context, key, uploadID string,
 	}
 
 	s.logger.Info("Multipart upload completed successfully",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID),
-		zap.Int64("size", stat.Size),
-		zap.String("etag", stat.ETag))
+		"key", key,
+		"upload_id", uploadID,
+		"size", stat.Size,
+		"etag", stat.ETag)
 
 	return stat, nil
 }
@@ -425,8 +424,8 @@ func (s *S3Storage) AbortMultipart(ctx context.Context, key, uploadID string) er
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Aborting multipart upload",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID))
+		"key", key,
+		"upload_id", uploadID)
 
 	input := &s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(s.client.GetConfig().Bucket),
@@ -440,8 +439,8 @@ func (s *S3Storage) AbortMultipart(ctx context.Context, key, uploadID string) er
 	}
 
 	s.logger.Debug("Multipart upload aborted successfully",
-		zap.String("key", key),
-		zap.String("upload_id", uploadID))
+		"key", key,
+		"upload_id", uploadID)
 
 	return nil
 }

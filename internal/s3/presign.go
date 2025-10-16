@@ -7,7 +7,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"go.uber.org/zap"
 
 	"github.com/gostratum/storagex/pkg/storagex"
 )
@@ -31,9 +30,9 @@ func (s *S3Storage) PresignGet(ctx context.Context, key string, opts *storagex.P
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Generating presigned GET URL",
-		zap.String("key", key),
-		zap.String("storage_key", storageKey),
-		zap.Duration("expiry", opts.Expiry))
+		"key", key,
+		"storage_key", storageKey,
+		"expiry", opts.Expiry)
 
 	// Build GetObject input
 	input := &s3.GetObjectInput{
@@ -59,8 +58,8 @@ func (s *S3Storage) PresignGet(ctx context.Context, key string, opts *storagex.P
 	}
 
 	s.logger.Debug("Presigned GET URL generated successfully",
-		zap.String("key", key),
-		zap.Duration("expiry", opts.Expiry))
+		"key", key,
+		"expiry", opts.Expiry)
 
 	return req.URL, nil
 }
@@ -84,9 +83,9 @@ func (s *S3Storage) PresignPut(ctx context.Context, key string, opts *storagex.P
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Generating presigned PUT URL",
-		zap.String("key", key),
-		zap.String("storage_key", storageKey),
-		zap.Duration("expiry", opts.Expiry))
+		"key", key,
+		"storage_key", storageKey,
+		"expiry", opts.Expiry)
 
 	// Build PutObject input
 	input := &s3.PutObjectInput{
@@ -119,8 +118,8 @@ func (s *S3Storage) PresignPut(ctx context.Context, key string, opts *storagex.P
 	}
 
 	s.logger.Debug("Presigned PUT URL generated successfully",
-		zap.String("key", key),
-		zap.Duration("expiry", opts.Expiry))
+		"key", key,
+		"expiry", opts.Expiry)
 
 	return req.URL, nil
 }
@@ -145,9 +144,9 @@ func (s *S3Storage) PresignPostPolicy(ctx context.Context, key string, opts *sto
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
 	s.logger.Debug("Generating presigned POST policy",
-		zap.String("key", key),
-		zap.String("storage_key", storageKey),
-		zap.Duration("expiry", opts.Expiry))
+		"key", key,
+		"storage_key", storageKey,
+		"expiry", opts.Expiry)
 
 	// Build POST presign input
 	input := &s3.PutObjectInput{
@@ -209,8 +208,8 @@ func (s *S3Storage) PresignPostPolicy(ctx context.Context, key string, opts *sto
 	}
 
 	s.logger.Debug("Presigned POST policy generated successfully",
-		zap.String("key", key),
-		zap.Duration("expiry", opts.Expiry))
+		"key", key,
+		"expiry", opts.Expiry)
 
 	return post, nil
 }
