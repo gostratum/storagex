@@ -1,6 +1,6 @@
 module github.com/gostratum/storagex
 
-go 1.25
+go 1.25.1
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.30.3
