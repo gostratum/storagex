@@ -82,7 +82,7 @@ func DefaultConfig() *Config {
 // This is useful for standalone usage without FX dependency injection.
 // For FX-based applications, use the Module which provides NewConfig automatically.
 func NewConfigFromLoader(loader interface {
-	Unmarshal(interface{}) error
+	Unmarshal(any) error
 }) (*Config, error) {
 	cfg := DefaultConfig()
 	if err := loader.Unmarshal(cfg); err != nil {

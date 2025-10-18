@@ -27,15 +27,15 @@ func WithLogger(logger Logger) Option {
 // WithCoreLogger is a convenience wrapper to accept a core logger and wrap it
 // into the storagex Logger adapter. This preserves backward compatibility for
 // callers using github.com/gostratum/core/logger.
-func WithCoreLogger(l interface{}) Option {
+func WithCoreLogger(l any) Option {
 	return func(opts *Options) {
 		// If the provided logger matches the expected coreLogger interface,
 		// wrap it. Otherwise, ignore and leave the default logger.
 		if cl, ok := l.(interface {
-			Debug(string, ...interface{})
-			Info(string, ...interface{})
-			Warn(string, ...interface{})
-			Error(string, ...interface{})
+			Debug(string, ...any)
+			Info(string, ...any)
+			Warn(string, ...any)
+			Error(string, ...any)
 		}); ok {
 			opts.logger = WrapCoreLogger(cl)
 		}
