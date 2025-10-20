@@ -66,7 +66,15 @@ import (
     
     "go.uber.org/fx"
     "github.com/gostratum/storagex"
-    _ "github.com/gostratum/storagex/internal/s3" // Register S3 implementation
+    // Opt-in the S3 provider by adding the s3 module to your FX app
+    // (import the adapters package and call s3.Module()). For example:
+    //
+    // import "github.com/gostratum/storagex/adapters/s3"
+    //
+    // fx.New(
+    //     storagex.Module,
+    //     s3.Module(),
+    // )
 )
 
 func main() {

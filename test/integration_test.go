@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/gostratum/storagex"
-	_ "github.com/gostratum/storagex/internal/s3" // Register S3 implementation
+	s3pkg "github.com/gostratum/storagex/adapters/s3"
 )
 
 func TestS3Integration(t *testing.T) {
@@ -40,10 +40,12 @@ func TestS3Integration(t *testing.T) {
 	err := storagex.ValidateConfig(cfg)
 	require.NoError(t, err, "Config should be valid")
 
-	// Create storage instance
+	// Create storage instance directly using the S3 adapter constructor so
+	// tests don't rely on package init side-effects.
 	ctx := context.Background()
-	storage, err := storagex.NewStorageFromConfig(ctx, cfg)
+	storageIface, err := s3pkg.NewS3Storage(ctx, cfg)
 	require.NoError(t, err, "Should create storage successfully")
+	var storage storagex.Storage = storageIface
 
 	t.Run("BasicOperations", func(t *testing.T) {
 		testBasicOperations(t, storage)

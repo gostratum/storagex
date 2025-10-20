@@ -13,14 +13,15 @@ import (
 	"github.com/gostratum/storagex"
 
 	// Import S3 implementation to register it
-	_ "github.com/gostratum/storagex/internal/s3"
+	"github.com/gostratum/storagex/adapters/s3"
 )
 
 func main() {
 	// Create the Fx application
 	app := fx.New(
 		storagex.Module,
-		fx.Invoke(runDemo),
+		s3.Module(),
+		fx.Invoke(func(storage storagex.Storage) { runDemo(storage) }),
 	)
 
 	// Start the application
@@ -41,9 +42,12 @@ func main() {
 }
 
 // runDemo demonstrates all storage operations
-func runDemo(storage storagex.Storage, logger storagex.Logger) {
+func runDemo(storage storagex.Storage) {
 	ctx := context.Background()
 
+	// The module no longer wires a logger provider automatically.
+	// Use a no-op logger for the demo to keep output quiet.
+	logger := storagex.NewNopLogger()
 	logger.Info("Starting StorageX demo")
 
 	// Demonstrate basic operations
