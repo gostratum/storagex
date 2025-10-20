@@ -10,6 +10,7 @@ import (
 
 	"go.uber.org/fx"
 
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/storagex"
 
 	// Import S3 implementation to register it
@@ -47,30 +48,30 @@ func runDemo(storage storagex.Storage) {
 
 	// The module no longer wires a logger provider automatically.
 	// Use a no-op logger for the demo to keep output quiet.
-	logger := storagex.NewNopLogger()
+	logger := logx.NewNoopLogger()
 	logger.Info("Starting StorageX demo")
 
 	// Demonstrate basic operations
 	if err := demonstrateBasicOps(ctx, storage, logger); err != nil {
-		logger.Error("Basic operations demo failed", "error", err)
+		logger.Error("Basic operations demo failed", storagex.ArgsToFields("error", err)...)
 		return
 	}
 
 	// Demonstrate multipart upload
 	if err := demonstrateMultipartUpload(ctx, storage, logger); err != nil {
-		logger.Error("Multipart upload demo failed", "error", err)
+		logger.Error("Multipart upload demo failed", storagex.ArgsToFields("error", err)...)
 		return
 	}
 
 	// Demonstrate presigned URLs
 	if err := demonstratePresignedURLs(ctx, storage, logger); err != nil {
-		logger.Error("Presigned URLs demo failed", "error", err)
+		logger.Error("Presigned URLs demo failed", storagex.ArgsToFields("error", err)...)
 		return
 	}
 
 	// Demonstrate batch operations
 	if err := demonstrateBatchOps(ctx, storage, logger); err != nil {
-		logger.Error("Batch operations demo failed", "error", err)
+		logger.Error("Batch operations demo failed", storagex.ArgsToFields("error", err)...)
 		return
 	}
 
@@ -78,7 +79,7 @@ func runDemo(storage storagex.Storage) {
 }
 
 // demonstrateBasicOps shows basic CRUD operations
-func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
+func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger logx.Logger) error {
 	logger.Info("=== Basic Operations Demo ===")
 
 	// Test data
@@ -86,7 +87,7 @@ func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger s
 	testData := []byte("Hello, StorageX! This is a test file.")
 
 	// 1. Put object
-	logger.Info("Putting object", "key", testKey)
+	logger.Info("Putting object", storagex.ArgsToFields("key", testKey)...)
 	stat, err := storage.PutBytes(ctx, testKey, testData, &storagex.PutOptions{
 		ContentType: "text/plain",
 		Metadata: map[string]string{
@@ -98,25 +99,27 @@ func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger s
 	if err != nil {
 		return fmt.Errorf("failed to put object: %w", err)
 	}
-	logger.Info("Object put successfully",
+	logger.Info("Object put successfully", storagex.ArgsToFields(
 		"key", stat.Key,
 		"size", stat.Size,
-		"etag", stat.ETag)
+		"etag", stat.ETag,
+	)...)
 
 	// 2. Head object (get metadata only)
-	logger.Info("Getting object metadata", "key", testKey)
+	logger.Info("Getting object metadata", storagex.ArgsToFields("key", testKey)...)
 	headStat, err := storage.Head(ctx, testKey)
 	if err != nil {
 		return fmt.Errorf("failed to head object: %w", err)
 	}
-	logger.Info("Object metadata retrieved",
+	logger.Info("Object metadata retrieved", storagex.ArgsToFields(
 		"key", headStat.Key,
 		"size", headStat.Size,
 		"content_type", headStat.ContentType,
-		"metadata", headStat.Metadata)
+		"metadata", headStat.Metadata,
+	)...)
 
 	// 3. Get object
-	logger.Info("Getting object content", "key", testKey)
+	logger.Info("Getting object content", storagex.ArgsToFields("key", testKey)...)
 	reader, getStat, err := storage.Get(ctx, testKey)
 	if err != nil {
 		return fmt.Errorf("failed to get object: %w", err)
@@ -129,13 +132,14 @@ func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger s
 		return fmt.Errorf("failed to read object content: %w", err)
 	}
 
-	logger.Info("Object content retrieved",
+	logger.Info("Object content retrieved", storagex.ArgsToFields(
 		"key", getStat.Key,
 		"content_length", len(content),
-		"content_preview", string(content[:min(50, len(content))]))
+		"content_preview", string(content[:min(50, len(content))]),
+	)...)
 
 	// 4. List objects
-	logger.Info("Listing objects with prefix", "prefix", "demo/")
+	logger.Info("Listing objects with prefix", storagex.ArgsToFields("prefix", "demo/")...)
 	page, err := storage.List(ctx, storagex.ListOptions{
 		Prefix:   "demo/",
 		PageSize: 10,
@@ -144,23 +148,25 @@ func demonstrateBasicOps(ctx context.Context, storage storagex.Storage, logger s
 		return fmt.Errorf("failed to list objects: %w", err)
 	}
 
-	logger.Info("Objects listed",
+	logger.Info("Objects listed", storagex.ArgsToFields(
 		"count", len(page.Keys),
-		"truncated", page.IsTruncated)
+		"truncated", page.IsTruncated,
+	)...)
 
 	for i, obj := range page.Keys {
-		logger.Info("Listed object",
+		logger.Info("Listed object", storagex.ArgsToFields(
 			"index", i,
 			"key", obj.Key,
 			"size", obj.Size,
-			"modified", obj.LastModified)
+			"modified", obj.LastModified,
+		)...)
 	}
 
 	return nil
 }
 
 // demonstrateMultipartUpload shows large file upload
-func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
+func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, logger logx.Logger) error {
 	logger.Info("=== Multipart Upload Demo ===")
 
 	// Create a large test file in memory (10MB)
@@ -172,9 +178,10 @@ func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, l
 		largeData[i] = byte(i % 256)
 	}
 
-	logger.Info("Starting multipart upload",
+	logger.Info("Starting multipart upload", storagex.ArgsToFields(
 		"key", testKey,
-		"size_mb", len(largeData)/(1024*1024))
+		"size_mb", len(largeData)/(1024*1024),
+	)...)
 
 	// Configure multipart upload
 	multipartConfig := &storagex.MultipartConfig{
@@ -199,12 +206,13 @@ func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, l
 	}
 
 	duration := time.Since(start)
-	logger.Info("Multipart upload completed",
+	logger.Info("Multipart upload completed", storagex.ArgsToFields(
 		"key", stat.Key,
 		"size", stat.Size,
 		"etag", stat.ETag,
 		"duration", duration,
-		"throughput_mb_s", float64(stat.Size)/(1024*1024)/duration.Seconds())
+		"throughput_mb_s", float64(stat.Size)/(1024*1024)/duration.Seconds(),
+	)...)
 
 	// Verify the upload by getting metadata
 	headStat, err := storage.Head(ctx, testKey)
@@ -212,22 +220,23 @@ func demonstrateMultipartUpload(ctx context.Context, storage storagex.Storage, l
 		return fmt.Errorf("failed to verify uploaded file: %w", err)
 	}
 
-	logger.Info("Multipart upload verified",
+	logger.Info("Multipart upload verified", storagex.ArgsToFields(
 		"uploaded_size", stat.Size,
 		"verified_size", headStat.Size,
-		"sizes_match", stat.Size == headStat.Size)
+		"sizes_match", stat.Size == headStat.Size,
+	)...)
 
 	return nil
 }
 
 // demonstratePresignedURLs shows presigned URL generation
-func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
+func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, logger logx.Logger) error {
 	logger.Info("=== Presigned URLs Demo ===")
 
 	testKey := "demo/presigned-test.txt"
 
 	// 1. Generate presigned PUT URL
-	logger.Info("Generating presigned PUT URL", "key", testKey)
+	logger.Info("Generating presigned PUT URL", storagex.ArgsToFields("key", testKey)...)
 	putURL, err := storage.PresignPut(ctx, testKey, &storagex.PresignOptions{
 		Expiry:      15 * time.Minute,
 		ContentType: "text/plain",
@@ -240,9 +249,10 @@ func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, log
 		return fmt.Errorf("failed to generate presigned PUT URL: %w", err)
 	}
 
-	logger.Info("Presigned PUT URL generated",
+	logger.Info("Presigned PUT URL generated", storagex.ArgsToFields(
 		"url", putURL[:min(100, len(putURL))]+"...",
-		"url_length", len(putURL))
+		"url_length", len(putURL),
+	)...)
 
 	// 2. Upload some content first so we can generate a GET URL
 	testContent := []byte("This file was uploaded to test presigned URLs!")
@@ -257,7 +267,7 @@ func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, log
 	}
 
 	// 3. Generate presigned GET URL
-	logger.Info("Generating presigned GET URL", "key", testKey)
+	logger.Info("Generating presigned GET URL", storagex.ArgsToFields("key", testKey)...)
 	getURL, err := storage.PresignGet(ctx, testKey, &storagex.PresignOptions{
 		Expiry:      15 * time.Minute,
 		ContentType: "text/plain",
@@ -266,20 +276,22 @@ func demonstratePresignedURLs(ctx context.Context, storage storagex.Storage, log
 		return fmt.Errorf("failed to generate presigned GET URL: %w", err)
 	}
 
-	logger.Info("Presigned GET URL generated",
+	logger.Info("Presigned GET URL generated", storagex.ArgsToFields(
 		"url", getURL[:min(100, len(getURL))]+"...",
-		"url_length", len(getURL))
+		"url_length", len(getURL),
+	)...)
 
 	// Note: In a real application, these URLs would be used by clients to upload/download directly
-	logger.Info("Presigned URLs can be used for direct client access",
+	logger.Info("Presigned URLs can be used for direct client access", storagex.ArgsToFields(
 		"put_curl_example", fmt.Sprintf(`curl -X PUT -H "Content-Type: text/plain" --data "Hello World" "%s"`, putURL[:min(80, len(putURL))]+"..."),
-		"get_curl_example", fmt.Sprintf(`curl "%s"`, getURL[:min(80, len(getURL))]+"..."))
+		"get_curl_example", fmt.Sprintf(`curl "%s"`, getURL[:min(80, len(getURL))]+"..."),
+	)...)
 
 	return nil
 }
 
 // demonstrateBatchOps shows batch operations
-func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger storagex.Logger) error {
+func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger logx.Logger) error {
 	logger.Info("=== Batch Operations Demo ===")
 
 	// Create multiple test files
@@ -292,7 +304,7 @@ func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger s
 	}
 
 	// Upload multiple files
-	logger.Info("Uploading multiple files", "count", len(testKeys))
+	logger.Info("Uploading multiple files", storagex.ArgsToFields("count", len(testKeys))...)
 	for i, key := range testKeys {
 		content := fmt.Sprintf("This is test file number %d\nCreated for batch operations demo\nTimestamp: %s",
 			i+1, time.Now().Format(time.RFC3339))
@@ -322,19 +334,19 @@ func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger s
 		return fmt.Errorf("failed to list batch files: %w", err)
 	}
 
-	logger.Info("Batch files listed",
-		"count", len(page.Keys))
+	logger.Info("Batch files listed", storagex.ArgsToFields("count", len(page.Keys))...)
 
 	for _, obj := range page.Keys {
-		logger.Info("Batch file",
+		logger.Info("Batch file", storagex.ArgsToFields(
 			"key", obj.Key,
 			"size", obj.Size,
-			"metadata", obj.Metadata)
+			"metadata", obj.Metadata,
+		)...)
 	}
 
 	// Delete batch of files
 	deleteKeys := testKeys[:3] // Delete first 3 files
-	logger.Info("Deleting batch of files", "keys", deleteKeys)
+	logger.Info("Deleting batch of files", storagex.ArgsToFields("keys", deleteKeys)...)
 
 	failedKeys, err := storage.DeleteBatch(ctx, deleteKeys)
 	if err != nil {
@@ -342,7 +354,7 @@ func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger s
 	}
 
 	if len(failedKeys) > 0 {
-		logger.Warn("Some files failed to delete", "failed_keys", failedKeys)
+		logger.Warn("Some files failed to delete", storagex.ArgsToFields("failed_keys", failedKeys)...)
 	} else {
 		logger.Info("All files deleted successfully")
 	}
@@ -356,11 +368,10 @@ func demonstrateBatchOps(ctx context.Context, storage storagex.Storage, logger s
 		return fmt.Errorf("failed to list files after deletion: %w", err)
 	}
 
-	logger.Info("Remaining files after batch delete",
-		"count", len(finalPage.Keys))
+	logger.Info("Remaining files after batch delete", storagex.ArgsToFields("count", len(finalPage.Keys))...)
 
 	for _, obj := range finalPage.Keys {
-		logger.Info("Remaining file", "key", obj.Key)
+		logger.Info("Remaining file", storagex.ArgsToFields("key", obj.Key)...)
 	}
 
 	return nil

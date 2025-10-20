@@ -15,13 +15,14 @@ import (
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/cenkalti/backoff/v4"
 
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/storagex"
 )
 
 // ClientConfig holds the configuration for creating S3 clients
 type ClientConfig struct {
 	Config *storagex.Config
-	Logger storagex.Logger
+	Logger logx.Logger
 }
 
 // ClientManager manages S3 client instances and configurations
@@ -29,7 +30,7 @@ type ClientManager struct {
 	s3Client      *s3.Client
 	presignClient *s3.PresignClient
 	config        *storagex.Config
-	logger        storagex.Logger
+	logger        logx.Logger
 }
 
 // NewClientManager creates a new S3 client manager
@@ -39,17 +40,18 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 	}
 
 	if clientConfig.Logger == nil {
-		clientConfig.Logger = storagex.NewNopLogger()
+		clientConfig.Logger = logx.NewNoopLogger()
 	}
 
 	cfg := clientConfig.Config
 	logger := clientConfig.Logger
 
-	logger.Debug("Creating S3 client manager",
+	logger.Debug("Creating S3 client manager", storagex.ArgsToFields(
 		"bucket", cfg.Bucket,
 		"region", cfg.Region,
 		"endpoint", cfg.Endpoint,
-		"use_path_style", cfg.UsePathStyle)
+		"use_path_style", cfg.UsePathStyle,
+	)...)
 
 	// Create AWS config
 	awsConfig, err := buildAWSConfig(ctx, cfg, logger)
@@ -94,15 +96,16 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 		return nil, fmt.Errorf("failed to validate S3 connection: %w", err)
 	}
 
-	logger.Info("S3 client manager created successfully",
+	logger.Info("S3 client manager created successfully", storagex.ArgsToFields(
 		"bucket", cfg.Bucket,
-		"region", cfg.Region)
+		"region", cfg.Region,
+	)...)
 
 	return manager, nil
 }
 
 // buildAWSConfig creates the AWS SDK configuration
-func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger storagex.Logger) (aws.Config, error) {
+func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger logx.Logger) (aws.Config, error) {
 	var options []func(*config.LoadOptions) error
 
 	// Set region
@@ -135,9 +138,10 @@ func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger storagex.L
 		return aws.Config{}, fmt.Errorf("unable to load AWS SDK config: %w", err)
 	}
 
-	logger.Debug("AWS config loaded",
+	logger.Debug("AWS config loaded", storagex.ArgsToFields(
 		"region", awsConfig.Region,
-		"max_retries", cfg.MaxRetries)
+		"max_retries", cfg.MaxRetries,
+	)...)
 
 	return awsConfig, nil
 }
@@ -177,14 +181,14 @@ func (cm *ClientManager) validateConnection(ctx context.Context) error {
 	})
 
 	if err != nil {
-		cm.logger.Warn("Failed to validate bucket access",
+		cm.logger.Warn("Failed to validate bucket access", storagex.ArgsToFields(
 			"bucket", cm.config.Bucket,
-			"error", err)
+			"error", err,
+		)...)
 		return fmt.Errorf("cannot access bucket %q: %w", cm.config.Bucket, err)
 	}
 
-	cm.logger.Debug("Bucket access validated",
-		"bucket", cm.config.Bucket)
+	cm.logger.Debug("Bucket access validated", storagex.ArgsToFields("bucket", cm.config.Bucket)...)
 
 	return nil
 }
@@ -205,7 +209,7 @@ func (cm *ClientManager) GetConfig() *storagex.Config {
 }
 
 // GetLogger returns the logger instance
-func (cm *ClientManager) GetLogger() storagex.Logger {
+func (cm *ClientManager) GetLogger() logx.Logger {
 	return cm.logger
 }
 
@@ -245,11 +249,11 @@ func (cm *ClientManager) CreateBucketIfNotExists(ctx context.Context) error {
 	}
 
 	if exists {
-		cm.logger.Debug("Bucket already exists", "bucket", cm.config.Bucket)
+		cm.logger.Debug("Bucket already exists", storagex.ArgsToFields("bucket", cm.config.Bucket)...)
 		return nil
 	}
 
-	cm.logger.Info("Creating bucket", "bucket", cm.config.Bucket)
+	cm.logger.Info("Creating bucket", storagex.ArgsToFields("bucket", cm.config.Bucket)...)
 
 	input := &s3.CreateBucketInput{
 		Bucket: aws.String(cm.config.Bucket),
@@ -267,6 +271,6 @@ func (cm *ClientManager) CreateBucketIfNotExists(ctx context.Context) error {
 		return fmt.Errorf("failed to create bucket %q: %w", cm.config.Bucket, err)
 	}
 
-	cm.logger.Info("Bucket created successfully", "bucket", cm.config.Bucket)
+	cm.logger.Info("Bucket created successfully", storagex.ArgsToFields("bucket", cm.config.Bucket)...)
 	return nil
 }

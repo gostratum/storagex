@@ -29,10 +29,11 @@ func (s *S3Storage) PresignGet(ctx context.Context, key string, opts *storagex.P
 
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Generating presigned GET URL",
+	s.logger.Debug("Generating presigned GET URL", storagex.ArgsToFields(
 		"key", key,
 		"storage_key", storageKey,
-		"expiry", opts.Expiry)
+		"expiry", opts.Expiry,
+	)...)
 
 	// Build GetObject input
 	input := &s3.GetObjectInput{
@@ -57,9 +58,10 @@ func (s *S3Storage) PresignGet(ctx context.Context, key string, opts *storagex.P
 		}
 	}
 
-	s.logger.Debug("Presigned GET URL generated successfully",
+	s.logger.Debug("Presigned GET URL generated successfully", storagex.ArgsToFields(
 		"key", key,
-		"expiry", opts.Expiry)
+		"expiry", opts.Expiry,
+	)...)
 
 	return req.URL, nil
 }
@@ -82,10 +84,11 @@ func (s *S3Storage) PresignPut(ctx context.Context, key string, opts *storagex.P
 
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Generating presigned PUT URL",
+	s.logger.Debug("Generating presigned PUT URL", storagex.ArgsToFields(
 		"key", key,
 		"storage_key", storageKey,
-		"expiry", opts.Expiry)
+		"expiry", opts.Expiry,
+	)...)
 
 	// Build PutObject input
 	input := &s3.PutObjectInput{
@@ -117,9 +120,10 @@ func (s *S3Storage) PresignPut(ctx context.Context, key string, opts *storagex.P
 		}
 	}
 
-	s.logger.Debug("Presigned PUT URL generated successfully",
+	s.logger.Debug("Presigned PUT URL generated successfully", storagex.ArgsToFields(
 		"key", key,
-		"expiry", opts.Expiry)
+		"expiry", opts.Expiry,
+	)...)
 
 	return req.URL, nil
 }
@@ -143,10 +147,11 @@ func (s *S3Storage) PresignPostPolicy(ctx context.Context, key string, opts *sto
 
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Generating presigned POST policy",
+	s.logger.Debug("Generating presigned POST policy", storagex.ArgsToFields(
 		"key", key,
 		"storage_key", storageKey,
-		"expiry", opts.Expiry)
+		"expiry", opts.Expiry,
+	)...)
 
 	// Build POST presign input
 	input := &s3.PutObjectInput{
@@ -207,9 +212,10 @@ func (s *S3Storage) PresignPostPolicy(ctx context.Context, key string, opts *sto
 		post.Fields["x-amz-meta-"+k] = v
 	}
 
-	s.logger.Debug("Presigned POST policy generated successfully",
+	s.logger.Debug("Presigned POST policy generated successfully", storagex.ArgsToFields(
 		"key", key,
-		"expiry", opts.Expiry)
+		"expiry", opts.Expiry,
+	)...)
 
 	return post, nil
 }

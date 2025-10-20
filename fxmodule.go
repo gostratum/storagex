@@ -5,17 +5,14 @@ import (
 	"fmt"
 
 	"github.com/gostratum/core/configx"
+	"github.com/gostratum/core/logx"
 	"go.uber.org/fx"
-	// note: we purposely keep the import minimal here and accept the core
-	// logger via fx injection in NewLogger to avoid a compile-time dependency
-	// on a concrete logger implementation in this package.
 )
 
 // Module is the Fx module that provides storage functionality
 var Module = fx.Module("storage",
 	fx.Provide(
 		NewConfig,
-		NewStorage,
 		NewKeyBuilder,
 	),
 	fx.Invoke(registerLifecycle),
@@ -26,8 +23,8 @@ type StorageParams struct {
 	fx.In
 
 	Config     *Config
-	Logger     Logger     `optional:"true"`
-	KeyBuilder KeyBuilder `optional:"true"`
+	Logger     logx.Logger `optional:"true"`
+	KeyBuilder KeyBuilder  `optional:"true"`
 }
 
 // NewConfig creates a new configuration from the configx loader
@@ -80,7 +77,7 @@ type LifecycleParams struct {
 
 	Lifecycle fx.Lifecycle
 	Storage   Storage
-	Logger    Logger `optional:"true"`
+	Logger    logx.Logger `optional:"true"`
 }
 
 // registerLifecycle registers shutdown hooks for graceful cleanup
@@ -101,7 +98,7 @@ func registerLifecycle(params LifecycleParams) {
 			if closer, ok := params.Storage.(interface{ Close() error }); ok {
 				if err := closer.Close(); err != nil {
 					if params.Logger != nil {
-						params.Logger.Error("Error closing storage", "error", err)
+						params.Logger.Error("Error closing storage", ArgsToFields("error", err)...)
 					}
 					return err
 				}
@@ -119,7 +116,6 @@ func registerLifecycle(params LifecycleParams) {
 var TestModule = fx.Module("storagex-test",
 	fx.Provide(
 		NewTestConfig,
-		NewStorage,
 		NewTestKeyBuilder,
 	),
 )
@@ -148,8 +144,15 @@ func WithCustomKeyBuilder(kb KeyBuilder) fx.Option {
 }
 
 // WithCustomLogger provides a custom logger to the DI container
-func WithCustomLogger(logger Logger) fx.Option {
+func WithCustomLogger(logger logx.Logger) fx.Option {
 	return fx.Supply(logger)
+}
+
+// WithCustomStorage provides a concrete Storage instance to the FX graph.
+// Useful for tests or for applications that construct storage outside of
+// adapter modules.
+func WithCustomStorage(s Storage) fx.Option {
+	return fx.Supply(s)
 }
 
 // ModuleOptions allows customization of the storage module

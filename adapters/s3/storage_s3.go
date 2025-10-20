@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
+	"github.com/gostratum/core/logx"
 	"github.com/gostratum/storagex"
 )
 
@@ -20,7 +21,7 @@ import (
 type S3Storage struct {
 	client     *ClientManager
 	keyBuilder storagex.KeyBuilder
-	logger     storagex.Logger
+	logger     logx.Logger
 }
 
 // NewS3Storage creates a new S3 storage implementation
@@ -59,10 +60,11 @@ func (s *S3Storage) Put(ctx context.Context, key string, r io.Reader, opts *stor
 	// Build the actual storage key
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Putting object",
+	s.logger.Debug("Putting object", storagex.ArgsToFields(
 		"key", key,
 		"storage_key", storageKey,
-		"content_type", opts.ContentType)
+		"content_type", opts.ContentType,
+	)...)
 
 	// Check if object exists when overwrite is false
 	if !opts.Overwrite {
@@ -133,10 +135,11 @@ func (s *S3Storage) Put(ctx context.Context, key string, r io.Reader, opts *stor
 		stat.ETag = aws.ToString(output.ETag)
 	}
 
-	s.logger.Debug("Object put successfully",
+	s.logger.Debug("Object put successfully", storagex.ArgsToFields(
 		"key", key,
 		"size", stat.Size,
-		"etag", stat.ETag)
+		"etag", stat.ETag,
+	)...)
 
 	return stat, nil
 }
@@ -176,9 +179,10 @@ func (s *S3Storage) PutFile(ctx context.Context, key string, path string, opts *
 func (s *S3Storage) Get(ctx context.Context, key string) (storagex.ReaderAtCloser, storagex.Stat, error) {
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Getting object",
+	s.logger.Debug("Getting object", storagex.ArgsToFields(
 		"key", key,
-		"storage_key", storageKey)
+		"storage_key", storageKey,
+	)...)
 
 	// Get object
 	input := &s3.GetObjectInput{
@@ -227,10 +231,11 @@ func (s *S3Storage) Get(ctx context.Context, key string) (storagex.ReaderAtClose
 		size:       stat.Size,
 	}
 
-	s.logger.Debug("Object retrieved successfully",
+	s.logger.Debug("Object retrieved successfully", storagex.ArgsToFields(
 		"key", key,
 		"size", stat.Size,
-		"etag", stat.ETag)
+		"etag", stat.ETag,
+	)...)
 
 	return reader, stat, nil
 }
@@ -239,9 +244,10 @@ func (s *S3Storage) Get(ctx context.Context, key string) (storagex.ReaderAtClose
 func (s *S3Storage) Head(ctx context.Context, key string) (storagex.Stat, error) {
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Head object",
+	s.logger.Debug("Head object", storagex.ArgsToFields(
 		"key", key,
-		"storage_key", storageKey)
+		"storage_key", storageKey,
+	)...)
 
 	input := &s3.HeadObjectInput{
 		Bucket: aws.String(s.client.GetConfig().Bucket),
@@ -283,20 +289,22 @@ func (s *S3Storage) Head(ctx context.Context, key string) (storagex.Stat, error)
 		stat.Metadata = output.Metadata
 	}
 
-	s.logger.Debug("Object head successful",
+	s.logger.Debug("Object head successful", storagex.ArgsToFields(
 		"key", key,
 		"size", stat.Size,
-		"etag", stat.ETag)
+		"etag", stat.ETag,
+	)...)
 
 	return stat, nil
 }
 
 // List retrieves objects with optional filtering and pagination
 func (s *S3Storage) List(ctx context.Context, opts storagex.ListOptions) (storagex.ListPage, error) {
-	s.logger.Debug("Listing objects",
+	s.logger.Debug("Listing objects", storagex.ArgsToFields(
 		"prefix", opts.Prefix,
 		"delimiter", opts.Delimiter,
-		"page_size", opts.PageSize)
+		"page_size", opts.PageSize,
+	)...)
 
 	// Build storage prefix
 	storagePrefix := ""
@@ -382,10 +390,11 @@ func (s *S3Storage) List(ctx context.Context, opts storagex.ListOptions) (storag
 		}
 	}
 
-	s.logger.Debug("Objects listed successfully",
+	s.logger.Debug("Objects listed successfully", storagex.ArgsToFields(
 		"count", len(page.Keys),
 		"prefixes", len(page.CommonPrefixes),
-		"truncated", page.IsTruncated)
+		"truncated", page.IsTruncated,
+	)...)
 
 	return page, nil
 }
@@ -394,9 +403,10 @@ func (s *S3Storage) List(ctx context.Context, opts storagex.ListOptions) (storag
 func (s *S3Storage) Delete(ctx context.Context, key string) error {
 	storageKey := s.keyBuilder.BuildKey(key, nil)
 
-	s.logger.Debug("Deleting object",
+	s.logger.Debug("Deleting object", storagex.ArgsToFields(
 		"key", key,
-		"storage_key", storageKey)
+		"storage_key", storageKey,
+	)...)
 
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(s.client.GetConfig().Bucket),
@@ -408,7 +418,7 @@ func (s *S3Storage) Delete(ctx context.Context, key string) error {
 		return MapS3Error(err, "delete", key)
 	}
 
-	s.logger.Debug("Object deleted successfully", "key", key)
+	s.logger.Debug("Object deleted successfully", storagex.ArgsToFields("key", key)...)
 	return nil
 }
 
@@ -418,7 +428,7 @@ func (s *S3Storage) DeleteBatch(ctx context.Context, keys []string) ([]string, e
 		return nil, nil
 	}
 
-	s.logger.Debug("Deleting objects batch", "count", len(keys))
+	s.logger.Debug("Deleting objects batch", storagex.ArgsToFields("count", len(keys))...)
 
 	// Build delete objects input
 	objects := make([]types.ObjectIdentifier, 0, len(keys))
@@ -456,10 +466,11 @@ func (s *S3Storage) DeleteBatch(ctx context.Context, keys []string) ([]string, e
 		}
 	}
 
-	s.logger.Debug("Batch delete completed",
+	s.logger.Debug("Batch delete completed", storagex.ArgsToFields(
 		"requested", len(keys),
 		"deleted", len(output.Deleted),
-		"failed", len(failedKeys))
+		"failed", len(failedKeys),
+	)...)
 
 	return failedKeys, nil
 }

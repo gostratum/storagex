@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/gostratum/core/logx"
 )
 
 // Options holds functional options for customizing storage behavior
 type Options struct {
-	logger     Logger
+	logger     logx.Logger
 	keyBuilder KeyBuilder
 	clock      func() time.Time
 }
@@ -16,32 +18,35 @@ type Options struct {
 // Option is a functional option for configuring Storage
 type Option func(*Options)
 
-// WithLogger sets a custom logger
-// WithLogger sets a custom logger implementing the storagex Logger adapter.
-func WithLogger(logger Logger) Option {
+// WithLogger sets a custom core logx.Logger
+func WithLogger(logger logx.Logger) Option {
 	return func(opts *Options) {
 		opts.logger = logger
 	}
 }
 
-// WithCoreLogger is a convenience wrapper to accept a core logger and wrap it
-// into the storagex Logger adapter. This preserves backward compatibility for
-// callers using github.com/gostratum/core/logger.
-//
-// Deprecated: The module no longer wires a logger provider automatically.
-// Prefer passing a logger explicitly to storage constructors via WithLogger
-// or wiring a logger into your FX graph and using WithCustomLogger/WithCustomKeyBuilder.
+// WithLogxLogger allows passing a core/logx.Logger directly. This is a
+// lightweight migration helper for callers still constructing Storage
+// imperatively; prefer providing `logx.Logger` via FX DI and using
+// WithLogger.
+func WithLogxLogger(l any) Option {
+	return func(opts *Options) {
+		if lx, ok := l.(logx.Logger); ok {
+			opts.logger = lx
+		}
+	}
+}
+
+// WithCoreLogger is a convenience wrapper to accept a core logger. The
+// storagex module now uses `core/logx.Logger` directly; prefer passing a
+// `logx.Logger` explicitly via WithLogger or via FX DI. This helper will
+// accept a `logx.Logger` value and use it if provided.
 func WithCoreLogger(l any) Option {
 	return func(opts *Options) {
 		// If the provided logger matches the expected coreLogger interface,
 		// wrap it. Otherwise, ignore and leave the default logger.
-		if cl, ok := l.(interface {
-			Debug(string, ...any)
-			Info(string, ...any)
-			Warn(string, ...any)
-			Error(string, ...any)
-		}); ok {
-			opts.logger = WrapCoreLogger(cl)
+		if lx, ok := l.(logx.Logger); ok {
+			opts.logger = lx
 		}
 	}
 }
@@ -63,7 +68,7 @@ func WithClock(clock func() time.Time) Option {
 // applyDefaults applies default values to unset options
 func (opts *Options) applyDefaults() {
 	if opts.logger == nil {
-		opts.logger = NewNopLogger()
+		opts.logger = logx.NewNoopLogger()
 	}
 	if opts.keyBuilder == nil {
 		opts.keyBuilder = &PrefixKeyBuilder{}
@@ -74,9 +79,9 @@ func (opts *Options) applyDefaults() {
 }
 
 // GetLogger returns the configured logger
-func (opts *Options) GetLogger() Logger {
+func (opts *Options) GetLogger() logx.Logger {
 	if opts.logger == nil {
-		return NewNopLogger()
+		return logx.NewNoopLogger()
 	}
 	return opts.logger
 }
