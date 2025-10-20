@@ -46,36 +46,15 @@ func NewConfig(loader configx.Loader) (*Config, error) {
 	return cfg, nil
 }
 
-// NewStorage creates a new Storage implementation
-// This is a factory function that needs to be implemented by storage providers
-var NewStorageFunc func(ctx context.Context, cfg *Config, opts ...Option) (Storage, error)
-
+// NewStorage creates a new Storage implementation.
+//
+// NOTE: storagex does not include built-in provider implementations. You must
+// include an adapter module (for example, `github.com/gostratum/storagex/adapters/s3.Module()`)
+// in your FX application or construct a provider directly (for example,
+// `adapters/s3.NewS3Storage`). This function previously relied on a global
+// provider registration (deprecated); that pattern has been removed.
 func NewStorage(params StorageParams) (Storage, error) {
-	if NewStorageFunc == nil {
-		return nil, fmt.Errorf("no storage implementation registered - did you import a provider?")
-	}
-
-	// Prepare options
-	var opts []Option
-
-	if params.Logger != nil {
-		opts = append(opts, WithLogger(params.Logger))
-	}
-
-	if params.KeyBuilder != nil {
-		opts = append(opts, WithKeyBuilder(params.KeyBuilder))
-	}
-
-	// Create storage implementation using registered factory with background context
-	// Deprecated behavior: create using background context. Prefer
-	// NewStorageFromParams which accepts a caller-provided context.
-	ctx := context.Background()
-	storage, err := NewStorageFunc(ctx, params.Config, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create storage: %w", err)
-	}
-
-	return storage, nil
+	return nil, fmt.Errorf("no storage implementation registered - include an adapter module (e.g. s3.Module()) or construct a provider directly")
 }
 
 // NewStorageFromParams creates a new Storage implementation using the provided
@@ -83,26 +62,7 @@ func NewStorage(params StorageParams) (Storage, error) {
 // storage initialization. Providers should prefer this constructor when they
 // need to run network requests or long-running setup during creation.
 func NewStorageFromParams(ctx context.Context, params StorageParams) (Storage, error) {
-	if NewStorageFunc == nil {
-		return nil, fmt.Errorf("no storage implementation registered - did you import a provider?")
-	}
-
-	// Prepare options
-	var opts []Option
-	if params.Logger != nil {
-		opts = append(opts, WithLogger(params.Logger))
-	}
-
-	if params.KeyBuilder != nil {
-		opts = append(opts, WithKeyBuilder(params.KeyBuilder))
-	}
-
-	storage, err := NewStorageFunc(ctx, params.Config, opts...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create storage: %w", err)
-	}
-
-	return storage, nil
+	return nil, fmt.Errorf("no storage implementation registered - include an adapter module (e.g. s3.Module()) or construct a provider directly")
 }
 
 // NewKeyBuilder creates a default key builder from configuration
@@ -289,9 +249,5 @@ For testing:
 // NewStorageFromConfig creates a storage instance directly from configuration
 // This is useful for testing and simple cases that don't need full DI
 func NewStorageFromConfig(ctx context.Context, cfg *Config, opts ...Option) (Storage, error) {
-	if NewStorageFunc == nil {
-		return nil, fmt.Errorf("no storage implementation registered - did you import a provider?")
-	}
-
-	return NewStorageFunc(ctx, cfg, opts...)
+	return nil, fmt.Errorf("no storage implementation registered - include an adapter (e.g. s3.Module()) or construct a provider directly")
 }

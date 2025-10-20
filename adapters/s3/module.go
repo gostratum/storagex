@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 
+	"github.com/gostratum/core"
 	"github.com/gostratum/storagex"
 	"go.uber.org/fx"
 )
@@ -14,6 +15,15 @@ func Module() fx.Option {
 	return fx.Module("storage-s3",
 		fx.Provide(
 			provideS3Storage,
+		),
+		// Provide a health checker for the S3 client (optional)
+		fx.Provide(
+			fx.Annotated{
+				Target: func(cm *ClientManager) core.Check {
+					return &s3HealthCheck{client: cm}
+				},
+				Group: "health_checkers",
+			},
 		),
 	)
 }
