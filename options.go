@@ -27,6 +27,10 @@ func WithLogger(logger Logger) Option {
 // WithCoreLogger is a convenience wrapper to accept a core logger and wrap it
 // into the storagex Logger adapter. This preserves backward compatibility for
 // callers using github.com/gostratum/core/logger.
+//
+// Deprecated: The module no longer wires a logger provider automatically.
+// Prefer passing a logger explicitly to storage constructors via WithLogger
+// or wiring a logger into your FX graph and using WithCustomLogger/WithCustomKeyBuilder.
 func WithCoreLogger(l any) Option {
 	return func(opts *Options) {
 		// If the provided logger matches the expected coreLogger interface,

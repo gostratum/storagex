@@ -6,6 +6,9 @@ import (
 
 	"github.com/gostratum/core/configx"
 	"go.uber.org/fx"
+	// note: we purposely keep the import minimal here and accept the core
+	// logger via fx injection in NewLogger to avoid a compile-time dependency
+	// on a concrete logger implementation in this package.
 )
 
 // Module is the Fx module that provides storage functionality
@@ -14,7 +17,6 @@ var Module = fx.Module("storage",
 		NewConfig,
 		NewStorage,
 		NewKeyBuilder,
-		NewLogger,
 	),
 	fx.Invoke(registerLifecycle),
 )
@@ -65,7 +67,36 @@ func NewStorage(params StorageParams) (Storage, error) {
 	}
 
 	// Create storage implementation using registered factory with background context
+	// Deprecated behavior: create using background context. Prefer
+	// NewStorageFromParams which accepts a caller-provided context.
 	ctx := context.Background()
+	storage, err := NewStorageFunc(ctx, params.Config, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create storage: %w", err)
+	}
+
+	return storage, nil
+}
+
+// NewStorageFromParams creates a new Storage implementation using the provided
+// context. This allows callers to control cancellation and timeouts during
+// storage initialization. Providers should prefer this constructor when they
+// need to run network requests or long-running setup during creation.
+func NewStorageFromParams(ctx context.Context, params StorageParams) (Storage, error) {
+	if NewStorageFunc == nil {
+		return nil, fmt.Errorf("no storage implementation registered - did you import a provider?")
+	}
+
+	// Prepare options
+	var opts []Option
+	if params.Logger != nil {
+		opts = append(opts, WithLogger(params.Logger))
+	}
+
+	if params.KeyBuilder != nil {
+		opts = append(opts, WithKeyBuilder(params.KeyBuilder))
+	}
+
 	storage, err := NewStorageFunc(ctx, params.Config, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create storage: %w", err)
@@ -81,20 +112,6 @@ func NewKeyBuilder(cfg *Config) KeyBuilder {
 	}
 
 	return NewPrefixKeyBuilder(cfg.BasePrefix)
-}
-
-// NewLogger creates a logger based on configuration.
-// The concrete logger implementation is provided by the application; this
-// function returns a storagex.Logger adapter. Currently we return a no-op
-// logger until a concrete gostratum/core logger is wired here.
-func NewLogger(cfg *Config) (Logger, error) {
-	if !cfg.EnableLogging {
-		return NewNopLogger(), nil
-	}
-	// TODO: create and return a gostratum/core logger instance here.
-	// For now return a no-op logger to keep behavior consistent until
-	// we wire the concrete core logger factory.
-	return NewNopLogger(), nil
 }
 
 // LifecycleParams defines parameters for lifecycle management
@@ -191,7 +208,6 @@ func NewModuleWithOptions(opts ModuleOptions) fx.Option {
 			NewConfig,
 			NewStorage,
 			NewKeyBuilder,
-			NewLogger,
 		),
 	}
 

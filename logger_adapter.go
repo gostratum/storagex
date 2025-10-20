@@ -1,6 +1,13 @@
 package storagex
 
 // Logger is an adapter interface that storagex uses for logging.
+//
+// Deprecated: The storagex module no longer provides a built-in logger
+// provider. Consumers should supply loggers explicitly when creating
+// storage instances (via options.WithLogger or options.WithCoreLogger) or
+// supply a logger into the FX graph themselves. This adapter remains to
+// preserve compatibility with existing provider implementations.
+//
 // It accepts simple key/value variadic pairs to keep call sites concise and
 // to decouple from any particular structured-logging Field type.
 type Logger interface {
