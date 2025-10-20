@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 )
 
 // S3Storage implements the Storage interface using AWS S3

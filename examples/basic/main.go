@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 
 	// Import S3 implementation to register it
 	_ "github.com/gostratum/storagex/internal/s3"

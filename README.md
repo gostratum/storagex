@@ -65,7 +65,7 @@ import (
     "log"
     
     "go.uber.org/fx"
-    "github.com/gostratum/storagex/pkg/storagex"
+    "github.com/gostratum/storagex"
     _ "github.com/gostratum/storagex/internal/s3" // Register S3 implementation
 )
 

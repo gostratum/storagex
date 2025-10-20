@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/google/uuid"
 
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 )
 
 // MultipartUploader handles chunked uploads for large files

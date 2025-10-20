@@ -86,7 +86,7 @@ release: clean deps test ## Prepare for release
 
 # Documentation
 docs: ## Generate documentation
-	go doc -all ./pkg/storagex
+	go doc -all .
 
 # Quick development cycle
 dev: up fmt test-unit ## Quick development cycle: start services, format, test
@@ -100,26 +100,26 @@ health: ## Check if services are healthy
 
 # Environment setup for different scenarios
 env-minio: ## Set up environment for MinIO testing
-	@echo "export STORAGEX_ENDPOINT=http://localhost:9000"
-	@echo "export STORAGEX_ACCESS_KEY=minioadmin"
-	@echo "export STORAGEX_SECRET_KEY=minioadmin"
-	@echo "export STORAGEX_BUCKET=test-bucket"
-	@echo "export STORAGEX_USE_PATH_STYLE=true"
-	@echo "export STORAGEX_DISABLE_SSL=true"
+	@echo "export STRATUM_STORAGE_ENDPOINT=http://localhost:9000"
+	@echo "export STRATUM_STORAGE_ACCESS_KEY=minioadmin"
+	@echo "export STRATUM_STORAGE_SECRET_KEY=minioadmin"
+	@echo "export STRATUM_STORAGE_BUCKET=test-bucket"
+	@echo "export STRATUM_STORAGE_USE_PATH_STYLE=true"
+	@echo "export STRATUM_STORAGE_DISABLE_SSL=true"
 
 env-localstack: ## Set up environment for Localstack testing
-	@echo "export STORAGEX_ENDPOINT=http://localhost:4566"
-	@echo "export STORAGEX_ACCESS_KEY=test"
-	@echo "export STORAGEX_SECRET_KEY=test"
-	@echo "export STORAGEX_BUCKET=test-bucket"
-	@echo "export STORAGEX_USE_PATH_STYLE=true"
-	@echo "export STORAGEX_DISABLE_SSL=true"
-	@echo "export STORAGEX_REGION=us-east-1"
+	@echo "export STRATUM_STORAGE_ENDPOINT=http://localhost:4566"
+	@echo "export STRATUM_STORAGE_ACCESS_KEY=test"
+	@echo "export STRATUM_STORAGE_SECRET_KEY=test"
+	@echo "export STRATUM_STORAGE_BUCKET=test-bucket"
+	@echo "export STRATUM_STORAGE_USE_PATH_STYLE=true"
+	@echo "export STRATUM_STORAGE_DISABLE_SSL=true"
+	@echo "export STRATUM_STORAGE_REGION=us-east-1"
 
 env-aws: ## Set up environment for AWS S3
-	@echo "export STORAGEX_REGION=us-east-1"
-	@echo "export STORAGEX_BUCKET=your-s3-bucket"
-	@echo "# Set STORAGEX_ACCESS_KEY and STORAGEX_SECRET_KEY with your AWS credentials"
+	@echo "export STRATUM_STORAGE_REGION=us-east-1"
+	@echo "export STRATUM_STORAGE_BUCKET=your-s3-bucket"
+	@echo "# Set STRATUM_STORAGE_ACCESS_KEY and STRATUM_STORAGE_SECRET_KEY with your AWS credentials"
 	@echo "# Or use AWS IAM roles/profiles"
 
 # Install development tools

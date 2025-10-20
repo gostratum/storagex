@@ -15,7 +15,7 @@ import (
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/cenkalti/backoff/v4"
 
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 )
 
 // ClientConfig holds the configuration for creating S3 clients
@@ -269,24 +269,4 @@ func (cm *ClientManager) CreateBucketIfNotExists(ctx context.Context) error {
 
 	cm.logger.Info("Bucket created successfully", "bucket", cm.config.Bucket)
 	return nil
-}
-
-// GetBucketLocation returns the region where the bucket is located
-func (cm *ClientManager) GetBucketLocation(ctx context.Context) (string, error) {
-	output, err := cm.s3Client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
-		Bucket: aws.String(cm.config.Bucket),
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("failed to get bucket location: %w", err)
-	}
-
-	location := string(output.LocationConstraint)
-
-	// Handle special case for us-east-1
-	if location == "" {
-		location = "us-east-1"
-	}
-
-	return location, nil
 }

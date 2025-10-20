@@ -218,7 +218,7 @@ Basic usage with fx:
 		"log"
 
 		"go.uber.org/fx"
-		"github.com/gostratum/storagex/pkg/storagex"
+		"github.com/gostratum/storagex"
 	)
 
 	func main() {

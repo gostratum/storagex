@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 )
 
 // MapS3Error converts S3 SDK errors to domain errors
@@ -67,11 +67,11 @@ func MapS3Error(err error, op, key string) error {
 
 	// TODO: Handle invalid bucket/request errors appropriately
 	// case *types.SomeValidType:
-	//	return &storagex.StorageError{
-	//		Op:  op,
-	//		Key: key,
-	//		Err: fmt.Errorf("%w: invalid request", storagex.ErrInvalidConfig),
-	//	}
+	//    return &storagex.StorageError{
+	//        Op:  op,
+	//        Key: key,
+	//        Err: fmt.Errorf("%w: invalid request", storagex.ErrInvalidConfig),
+	//    }
 
 	case *types.InvalidObjectState:
 		return &storagex.StorageError{

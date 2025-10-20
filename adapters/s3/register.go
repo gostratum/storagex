@@ -3,7 +3,7 @@ package s3
 import (
 	"context"
 
-	"github.com/gostratum/storagex/pkg/storagex"
+	"github.com/gostratum/storagex"
 )
 
 // init registers the S3 storage implementation

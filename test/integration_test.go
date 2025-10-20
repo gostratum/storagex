@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/gostratum/storagex"
 	_ "github.com/gostratum/storagex/internal/s3" // Register S3 implementation
-	"github.com/gostratum/storagex/pkg/storagex"
 )
 
 func TestS3Integration(t *testing.T) {
