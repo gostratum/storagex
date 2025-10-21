@@ -44,11 +44,22 @@ func ValidateConfig(cfg *Config) error {
 	}
 
 	// Validate credentials
-	if cfg.AccessKey == "" {
-		errors = append(errors, "access_key cannot be empty")
+	// Disallow partially-specified explicit credentials
+	if (cfg.AccessKey == "" && cfg.SecretKey != "") || (cfg.AccessKey != "" && cfg.SecretKey == "") {
+		errors = append(errors, "both access_key and secret_key must be set together; do not provide only one")
 	}
-	if cfg.SecretKey == "" {
-		errors = append(errors, "secret_key cannot be empty")
+
+	// If explicit creds are not provided, allow configuration to opt into SDK default chain
+	// or provide a RoleARN to perform AssumeRole. For non-AWS endpoints (Endpoint set),
+	// explicit credentials are required unless UseSDKDefaults is true.
+	if cfg.AccessKey == "" && cfg.SecretKey == "" {
+		if cfg.RoleARN == "" && !cfg.UseSDKDefaults {
+			// If endpoint is empty (AWS mode), prefer SDK defaults and allow missing creds.
+			if cfg.Endpoint != "" {
+				errors = append(errors, "credentials required for custom endpoint: provide access_key+secret_key or enable use_sdk_defaults or provide role_arn")
+			}
+			// else: endpoint empty -> AWS environment; allow SDK defaults at runtime
+		}
 	}
 
 	// Validate timeouts
@@ -100,6 +111,13 @@ func ValidateConfig(cfg *Config) error {
 	if cfg.BasePrefix != "" {
 		if err := validateBasePrefix(cfg.BasePrefix); err != nil {
 			errors = append(errors, fmt.Sprintf("invalid base_prefix: %v", err))
+		}
+	}
+
+	// Validate RoleARN basic format if provided
+	if cfg.RoleARN != "" {
+		if !strings.HasPrefix(cfg.RoleARN, "arn:") {
+			errors = append(errors, "role_arn looks invalid: must be an ARN (e.g., arn:aws:iam::123456789012:role/RoleName)")
 		}
 	}
 

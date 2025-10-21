@@ -197,6 +197,51 @@ storage:
 | `disable_ssl` | `STRATUM_STORAGE_DISABLE_SSL` | `false` | Disable SSL (local only) |
 | `enable_logging` | `STRATUM_STORAGE_ENABLE_LOGGING` | `false` | Enable debug logging |
 
+## Credentials and Deployment
+
+Production deployments should prefer the SDK default credential chain (instance profiles, IRSA, environment variables, or shared credentials) instead of embedding long-lived static keys in config files.
+
+Recommended config additions
+
+```yaml
+storage:
+    # Let the AWS SDK resolve credentials from the environment, profile, or instance role
+    use_sdk_defaults: true
+
+    # Optional: assume a role via STS if you want short-lived credentials
+    role_arn: arn:aws:iam::123456789012:role/MyStorageRole
+    external_id: optional-external-id
+
+    # Optional: select a shared profile
+    profile: my-aws-profile
+
+    # For local testing with MinIO, configure endpoint and explicit creds instead:
+    endpoint: http://localhost:9000
+    access_key: minioadmin
+    secret_key: minioadmin
+    use_path_style: true
+    disable_ssl: true
+```
+
+Behavior and validation
+
+- If `access_key`+`secret_key` are both set, they are used directly.
+- If they're not provided and `use_sdk_defaults` is true, the module defers credential resolution to the AWS SDK v2 default chain (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, shared credentials, instance/IRSA role).
+- If `role_arn` is set, the module will (at runtime) use the SDK-resolved source credentials and call STS AssumeRole to get short-lived credentials for the S3 client.
+- For custom endpoints (e.g., MinIO), explicit credentials are required unless you intentionally enable `use_sdk_defaults`.
+
+Security notes
+
+- Prefer `use_sdk_defaults: true` in cloud deployments so pods/VMs use instance profiles or IRSA.
+- Never commit static credentials to source control. Use environment variables, secrets, or AWS Secrets Manager.
+- The module avoids logging raw secret values; logs will indicate which credential source was used (explicit/env/sdk/assumed-role) without printing secret material.
+
+Runtime wiring (developer notes)
+
+- Use `config.LoadDefaultConfig(ctx, func(o *config.LoadOptions) error { o.SharedConfigProfile = cfg.Profile; return nil })` from AWS SDK v2 to build base config when `use_sdk_defaults` is enabled.
+- If `role_arn` is set, use `stscreds.NewAssumeRoleProvider(sts.NewFromConfig(baseCfg), cfg.RoleARN, opts...)` and pass that provider into the S3 client.
+
+
 ## API Reference
 
 ### Core Interface

@@ -30,6 +30,20 @@ type Config struct {
 	// SessionToken is the temporary session token (optional)
 	SessionToken string `mapstructure:"session_token" yaml:"session_token"`
 
+	// UseSDKDefaults when true will let the AWS SDK default credential chain (env, shared config, instance profile)
+	// be used when explicit credentials are not provided. Default: false
+	UseSDKDefaults bool `mapstructure:"use_sdk_defaults" yaml:"use_sdk_defaults" default:"false"`
+
+	// RoleARN optionally specifies an ARN to assume via STS. When set, the module will use the
+	// SDK default provider (or explicit creds if present) as the source and assume this role.
+	RoleARN string `mapstructure:"role_arn" yaml:"role_arn"`
+
+	// ExternalID is passed to STS AssumeRole when RoleARN is used.
+	ExternalID string `mapstructure:"external_id" yaml:"external_id"`
+
+	// Profile selects a shared credentials/profile name when loading SDK defaults.
+	Profile string `mapstructure:"profile" yaml:"profile"`
+
 	// RequestTimeout is the timeout for individual requests
 	RequestTimeout time.Duration `mapstructure:"request_timeout" yaml:"request_timeout" default:"30s"`
 
