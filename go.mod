@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.30.3
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/google/uuid v1.6.0
-	github.com/gostratum/core v0.1.7
+	github.com/gostratum/core v0.1.8
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/fx v1.24.0
 )
