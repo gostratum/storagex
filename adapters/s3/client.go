@@ -171,7 +171,43 @@ func buildAWSConfigWithLoader(ctx context.Context, cfg *storagex.Config, logger 
 
 	// If RoleARN is set, create an STS AssumeRole provider and swap credentials
 	if cfg.RoleARN != "" {
+		// NOTE: RoleARN is not a credential by itself — it instructs the SDK to
+		// call STS:AssumeRole and obtain temporary credentials. AssumeRole will
+		// use the already-loaded credentials from awsConfig as the source to
+		// authenticate to STS. Credential precedence is:
+		//   1) static credentials (access_key + secret_key)
+		//   2) shared profile (profile)
+		//   3) SDK default chain (env, instance profile, etc)
+		//
+		// For non-AWS/custom endpoints (e.g., MinIO) STS may not be available,
+		// so AssumeRole can fail at runtime. We attempt a lightweight
+		// credential retrieval here to fail fast with a clearer error when the
+		// source provider cannot produce credentials.
 		logger.Info("Config requests STS AssumeRole", storagex.ArgsToFields("role_arn", cfg.RoleARN)...)
+
+		// Attempt to resolve underlying credentials quickly to provide a better
+		// error when none are available. Use a short timeout to avoid blocking
+		// startup for long when providers like IMDS are slow. This behavior can
+		// be disabled via cfg.AssumeRoleValidateCredentials (default: false)
+		// to avoid startup network calls in restrictive environments.
+		if awsConfig.Credentials != nil {
+			if cfg.AssumeRoleValidateCredentials {
+				ctxTimeout, cancel := context.WithTimeout(ctx, 2*time.Second)
+				defer cancel()
+				if _, derr := awsConfig.Credentials.Retrieve(ctxTimeout); derr != nil {
+					// If retrieval failed, return an actionable error instead of
+					// proceeding to create an AssumeRole provider which would fail
+					// later with a less clear message.
+					return aws.Config{}, credSource, fmt.Errorf("unable to resolve underlying credentials for assume-role: %w", derr)
+				}
+			} else {
+				// Log a warning so users know that assume-role may fail at
+				// runtime if underlying credentials are absent. We continue to
+				// allow permissive configurations (e.g., custom endpoints) by
+				// default.
+				logger.Warn("assume-role credential validation is disabled; assume-role may fail at runtime if underlying credentials are missing", storagex.ArgsToFields("role_arn", cfg.RoleARN)...)
+			}
+		}
 
 		stsClient := sts.NewFromConfig(awsConfig)
 		assumeProv := stscreds.NewAssumeRoleProvider(stsClient, cfg.RoleARN, func(o *stscreds.AssumeRoleOptions) {
@@ -186,14 +222,6 @@ func buildAWSConfigWithLoader(ctx context.Context, cfg *storagex.Config, logger 
 	}
 
 	return awsConfig, credSource, nil
-}
-
-// buildAWSConfig is the production entrypoint that uses config.LoadDefaultConfig as the loader.
-func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger logx.Logger) (aws.Config, error) {
-	awsCfg, _, err := buildAWSConfigWithLoader(ctx, cfg, logger, func(ctx context.Context, opts ...func(*config.LoadOptions) error) (aws.Config, error) {
-		return config.LoadDefaultConfig(ctx, opts...)
-	})
-	return awsCfg, err
 }
 
 // createBackoffStrategy creates a custom backoff strategy

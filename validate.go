@@ -49,17 +49,24 @@ func ValidateConfig(cfg *Config) error {
 		errors = append(errors, "both access_key and secret_key must be set together; do not provide only one")
 	}
 
-	// If explicit creds are not provided, allow configuration to opt into SDK default chain
-	// or provide a RoleARN to perform AssumeRole. For non-AWS endpoints (Endpoint set),
-	// explicit credentials are required unless UseSDKDefaults is true.
+	// If explicit credentials are not provided, allow the configuration to
+	// opt into the SDK default chain (env/instance profile) or provide a
+	// RoleARN to perform AssumeRole. Note: RoleARN itself is not a
+	// credential — it requires underlying credentials (static/profile/SDK
+	// defaults) to call STS. For custom endpoints (Endpoint set) STS may not
+	// be available, so users should ensure underlying credentials are
+	// available (via AccessKey/SecretKey or SDK defaults) when using RoleARN.
 	if cfg.AccessKey == "" && cfg.SecretKey == "" {
-		if cfg.RoleARN == "" && !cfg.UseSDKDefaults {
-			// If endpoint is empty (AWS mode), prefer SDK defaults and allow missing creds.
-			if cfg.Endpoint != "" {
-				errors = append(errors, "credentials required for custom endpoint: provide access_key+secret_key or enable use_sdk_defaults or provide role_arn")
+		if cfg.Endpoint != "" {
+			// Custom endpoint: recommend explicit creds or SDK defaults. We
+			// remain permissive (do not disallow RoleARN-only), but provide a
+			// clearer validation message when no other credential source is
+			// present.
+			if cfg.RoleARN == "" && !cfg.UseSDKDefaults {
+				errors = append(errors, "credentials required for custom endpoint: provide access_key+secret_key or enable use_sdk_defaults")
 			}
-			// else: endpoint empty -> AWS environment; allow SDK defaults at runtime
 		}
+		// If endpoint empty (AWS), allow RoleARN or SDK defaults at runtime.
 	}
 
 	// Validate timeouts
@@ -156,12 +163,8 @@ func isPlausibleRoleARN(arn string) bool {
 			return false
 		}
 	}
-	// resource should start with 'role/' or 'role/' with path
 	res := parts[5]
-	if !(strings.HasPrefix(res, "role/") || strings.HasPrefix(res, "role/")) {
-		return false
-	}
-	return true
+	return strings.HasPrefix(res, "role/")
 }
 
 // validateBucketName validates S3 bucket naming rules

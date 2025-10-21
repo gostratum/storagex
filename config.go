@@ -34,6 +34,15 @@ type Config struct {
 	// be used when explicit credentials are not provided. Default: false
 	UseSDKDefaults bool `mapstructure:"use_sdk_defaults" yaml:"use_sdk_defaults" default:"false"`
 
+	// AssumeRoleValidateCredentials controls whether the client will perform a
+	// lightweight credentials retrieval before attempting STS AssumeRole.
+	// When true, the client will attempt to resolve underlying source
+	// credentials and return an error if they cannot be retrieved. When false
+	// (default) the client will only log a warning and continue (useful for
+	// environments where credential resolution may be delayed or network calls
+	// are disallowed at startup).
+	AssumeRoleValidateCredentials bool `mapstructure:"assume_role_validate_credentials" yaml:"assume_role_validate_credentials" default:"false"`
+
 	// RoleARN optionally specifies an ARN to assume via STS. When set, the module will use the
 	// SDK default provider (or explicit creds if present) as the source and assume this role.
 	RoleARN string `mapstructure:"role_arn" yaml:"role_arn"`
