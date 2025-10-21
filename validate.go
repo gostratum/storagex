@@ -114,10 +114,10 @@ func ValidateConfig(cfg *Config) error {
 		}
 	}
 
-	// Validate RoleARN basic format if provided
+	// Validate RoleARN basic format if provided (ensure plausible IAM role ARN)
 	if cfg.RoleARN != "" {
-		if !strings.HasPrefix(cfg.RoleARN, "arn:") {
-			errors = append(errors, "role_arn looks invalid: must be an ARN (e.g., arn:aws:iam::123456789012:role/RoleName)")
+		if !isPlausibleRoleARN(cfg.RoleARN) {
+			errors = append(errors, "role_arn looks invalid: must be a valid IAM role ARN (e.g., arn:aws:iam::123456789012:role/RoleName)")
 		}
 	}
 
@@ -129,6 +129,39 @@ func ValidateConfig(cfg *Config) error {
 	}
 
 	return nil
+}
+
+// isPlausibleRoleARN performs a light-weight validation of an IAM role ARN
+func isPlausibleRoleARN(arn string) bool {
+	// Expected form: arn:partition:service:region:account-id:resource
+	parts := strings.SplitN(arn, ":", 6)
+	if len(parts) != 6 {
+		return false
+	}
+	// parts[0] == "arn"
+	if parts[0] != "arn" {
+		return false
+	}
+	// service should be iam
+	if parts[2] != "iam" {
+		return false
+	}
+	// account-id should be numeric (basic check)
+	acct := parts[4]
+	if acct == "" {
+		return false
+	}
+	for _, r := range acct {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	// resource should start with 'role/' or 'role/' with path
+	res := parts[5]
+	if !(strings.HasPrefix(res, "role/") || strings.HasPrefix(res, "role/")) {
+		return false
+	}
+	return true
 }
 
 // validateBucketName validates S3 bucket naming rules

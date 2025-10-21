@@ -399,6 +399,14 @@ func (s *S3Storage) List(ctx context.Context, opts storagex.ListOptions) (storag
 	return page, nil
 }
 
+// Close cleans up any resources held by the storage implementation.
+func (s *S3Storage) Close() error {
+	if s.client != nil {
+		return s.client.Close()
+	}
+	return nil
+}
+
 // Delete removes a single object
 func (s *S3Storage) Delete(ctx context.Context, key string) error {
 	storageKey := s.keyBuilder.BuildKey(key, nil)

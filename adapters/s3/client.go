@@ -15,6 +15,8 @@ import (
 	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/cenkalti/backoff/v4"
 
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/gostratum/core/logx"
 	"github.com/gostratum/storagex"
 )
@@ -53,11 +55,15 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 		"use_path_style", cfg.UsePathStyle,
 	)...)
 
-	// Create AWS config
-	awsConfig, err := buildAWSConfig(ctx, cfg, logger)
+	// Create AWS config (capture credential source for logging)
+	awsConfig, credSource, err := buildAWSConfigWithLoader(ctx, cfg, logger, func(ctx context.Context, opts ...func(*config.LoadOptions) error) (aws.Config, error) {
+		return config.LoadDefaultConfig(ctx, opts...)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build AWS config: %w", err)
 	}
+
+	logger.Info("Credential source selected", storagex.ArgsToFields("cred_source", credSource)...)
 
 	// Create S3 service client
 	s3Client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
@@ -104,16 +110,22 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 	return manager, nil
 }
 
-// buildAWSConfig creates the AWS SDK configuration
-func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger logx.Logger) (aws.Config, error) {
+// awsConfigLoader is a function that loads an aws.Config given LoadOptions.
+type awsConfigLoader func(ctx context.Context, opts ...func(*config.LoadOptions) error) (aws.Config, error)
+
+// buildAWSConfigWithLoader builds an AWS config using the supplied loader (testable).
+// It returns the loaded aws.Config and the detected credential source (one of:
+// "static", "profile", "sdk-default", "assumed-role").
+func buildAWSConfigWithLoader(ctx context.Context, cfg *storagex.Config, logger logx.Logger, loader awsConfigLoader) (aws.Config, string, error) {
 	var options []func(*config.LoadOptions) error
+	credSource := "unknown"
 
 	// Set region
 	if cfg.Region != "" {
 		options = append(options, config.WithRegion(cfg.Region))
 	}
 
-	// Set credentials
+	// Static credentials if provided
 	if cfg.AccessKey != "" && cfg.SecretKey != "" {
 		credProvider := credentials.NewStaticCredentialsProvider(
 			cfg.AccessKey,
@@ -121,6 +133,15 @@ func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger logx.Logge
 			cfg.SessionToken,
 		)
 		options = append(options, config.WithCredentialsProvider(credProvider))
+		credSource = "static"
+	}
+
+	// Profile
+	if cfg.Profile != "" {
+		options = append(options, config.WithSharedConfigProfile(cfg.Profile))
+		if credSource == "unknown" {
+			credSource = "profile"
+		}
 	}
 
 	// Configure retries with exponential backoff
@@ -132,18 +153,47 @@ func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger logx.Logge
 		})
 	}))
 
-	// Load the configuration
-	awsConfig, err := config.LoadDefaultConfig(ctx, options...)
+	// Load the configuration via injected loader
+	awsConfig, err := loader(ctx, options...)
 	if err != nil {
-		return aws.Config{}, fmt.Errorf("unable to load AWS SDK config: %w", err)
+		return aws.Config{}, credSource, fmt.Errorf("unable to load AWS SDK config: %w", err)
+	}
+
+	if credSource == "unknown" {
+		credSource = "sdk-default"
 	}
 
 	logger.Debug("AWS config loaded", storagex.ArgsToFields(
 		"region", awsConfig.Region,
 		"max_retries", cfg.MaxRetries,
+		"cred_source", credSource,
 	)...)
 
-	return awsConfig, nil
+	// If RoleARN is set, create an STS AssumeRole provider and swap credentials
+	if cfg.RoleARN != "" {
+		logger.Info("Config requests STS AssumeRole", storagex.ArgsToFields("role_arn", cfg.RoleARN)...)
+
+		stsClient := sts.NewFromConfig(awsConfig)
+		assumeProv := stscreds.NewAssumeRoleProvider(stsClient, cfg.RoleARN, func(o *stscreds.AssumeRoleOptions) {
+			if cfg.ExternalID != "" {
+				o.ExternalID = &cfg.ExternalID
+			}
+			o.RoleSessionName = "storagex-assume-role"
+		})
+
+		awsConfig.Credentials = aws.NewCredentialsCache(assumeProv)
+		credSource = "assumed-role"
+	}
+
+	return awsConfig, credSource, nil
+}
+
+// buildAWSConfig is the production entrypoint that uses config.LoadDefaultConfig as the loader.
+func buildAWSConfig(ctx context.Context, cfg *storagex.Config, logger logx.Logger) (aws.Config, error) {
+	awsCfg, _, err := buildAWSConfigWithLoader(ctx, cfg, logger, func(ctx context.Context, opts ...func(*config.LoadOptions) error) (aws.Config, error) {
+		return config.LoadDefaultConfig(ctx, opts...)
+	})
+	return awsCfg, err
 }
 
 // createBackoffStrategy creates a custom backoff strategy
