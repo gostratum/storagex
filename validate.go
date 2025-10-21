@@ -274,7 +274,9 @@ func validateBasePrefix(prefix string) error {
 }
 
 // SanitizeConfig applies automatic fixes to configuration where possible
-func SanitizeConfig(cfg *Config) *Config {
+// Sanitize applies automatic fixes to configuration where possible and returns
+// a sanitized copy without mutating the receiver.
+func (cfg *Config) Sanitize() *Config {
 	if cfg == nil {
 		return DefaultConfig()
 	}
@@ -330,7 +332,8 @@ func SanitizeConfig(cfg *Config) *Config {
 }
 
 // ConfigSummary returns a safe summary of the configuration for logging
-func ConfigSummary(cfg *Config) map[string]any {
+// ConfigSummary returns a safe summary of the configuration for logging
+func (cfg *Config) ConfigSummary() map[string]any {
 	if cfg == nil {
 		return map[string]any{"error": "nil config"}
 	}
