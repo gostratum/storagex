@@ -6,7 +6,22 @@
 
 StorageX is a clean, production-ready Go module that provides a **DI-friendly object storage abstraction** with a **first-class S3-compatible implementation**. Built for **Go 1.25** using clean architecture principles, small interfaces, and 100% composable design.
 
-## Recent changes (summary)
+## What's New in v0.1.5
+
+**🚀 Simplified Client Creation & Framework-Aligned Startup**
+
+- **Removed validation complexity**: No more `ValidateFunc` injection - client creation is straightforward
+- **Fast startup pattern**: S3 clients are created immediately without blocking network calls (matches GoStratum's `dbx` and `httpx` patterns)
+- **Health-check validation**: Connectivity is verified via `/healthz` readiness probes instead of startup validation
+- **Kubernetes-native**: Apps start quickly and signal "not ready" until S3 is accessible, then become ready automatically
+
+**Breaking Changes in v0.1.5:**
+- `ClientConfig.ValidateFunc` removed - if you create `ClientManager` directly, remove the `ValidateFunc` field
+- Most users are unaffected - this is an internal change to the S3 adapter
+
+See [CHANGELOG.md](CHANGELOG.md) for complete version history.
+
+## Recent Changes (v0.1.4)
 
 - Credential sourcing: added `use_sdk_defaults`, `profile`, and `role_arn` support so the module can use the AWS SDK v2 default credential chain (env, shared credentials, instance profile/IRSA) and optionally perform STS AssumeRole when `role_arn` is set.
 - Runtime wiring: `buildAWSConfig` is now refactored to be testable (injectable loader). The S3 adapter will swap in an AssumeRole credentials provider when `role_arn` is present.
@@ -484,10 +499,13 @@ make test-integration
 make down
 ```
 
-By default the tests expect configuration from environment variables. The module
-now accepts a pluggable config provider (we commonly use `github.com/gostratum/core/configx`).
-If you need to run the example or tests with a custom configuration, create a
-`configx` instance, set keys (or bind env/files) and supply it to the module via
+**Test Behavior:**
+- Client creation is fast and does not perform network validation
+- Health checks verify S3 connectivity - tests can check readiness via the health endpoint
+- The `make test-integration` target automatically exports `STRATUM_STORAGE_*` environment variables for MinIO
+
+**Custom Configuration:**
+By default tests expect configuration from environment variables. The module accepts a pluggable config provider (we commonly use `github.com/gostratum/core/configx`).
 
 Example in code:
 
