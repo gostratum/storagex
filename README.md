@@ -10,6 +10,7 @@ StorageX is a clean, production-ready Go module that provides a **DI-friendly ob
 
 - Credential sourcing: added `use_sdk_defaults`, `profile`, and `role_arn` support so the module can use the AWS SDK v2 default credential chain (env, shared credentials, instance profile/IRSA) and optionally perform STS AssumeRole when `role_arn` is set.
 - Runtime wiring: `buildAWSConfig` is now refactored to be testable (injectable loader). The S3 adapter will swap in an AssumeRole credentials provider when `role_arn` is present.
+- AssumeRole credential validation: added `assume_role_validate_credentials` option (default: false). When enabled the client performs a short credential retrieval before creating the STS AssumeRole provider to fail fast with a clearer error if underlying source credentials are not resolvable. When disabled the client will log a warning and continue (preserves permissive startup behavior for custom endpoints).
 - Lifecycle and cleanup: `S3Storage.Close()` now forwards to the `ClientManager.Close()` so FX lifecycle hooks will close clients at shutdown (the module already invokes `Close()` when storage implements it).
 - Tests: added unit tests for credential-source detection and integration test scaffolding (localstack + docker-compose). Integration tests are build-tagged `integration` and are skipped by default.
 
@@ -205,6 +206,7 @@ storage:
 | `base_prefix` | `STRATUM_STORAGE_BASE_PREFIX` | `""` | Multi-tenant prefix template |
 | `disable_ssl` | `STRATUM_STORAGE_DISABLE_SSL` | `false` | Disable SSL (local only) |
 | `enable_logging` | `STRATUM_STORAGE_ENABLE_LOGGING` | `false` | Enable debug logging |
+| `assume_role_validate_credentials` | `STRATUM_STORAGE_ASSUME_ROLE_VALIDATE_CREDENTIALS` | `false` | When true the client will attempt to resolve underlying credentials (short timeout) before performing STS AssumeRole; when false the client logs a warning instead of failing at startup. |
 
 ## Credentials and Deployment
 

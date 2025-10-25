@@ -125,23 +125,42 @@ func buildAWSConfigWithLoader(ctx context.Context, cfg *storagex.Config, logger 
 		options = append(options, config.WithRegion(cfg.Region))
 	}
 
-	// Static credentials if provided
-	if cfg.AccessKey != "" && cfg.SecretKey != "" {
-		credProvider := credentials.NewStaticCredentialsProvider(
-			cfg.AccessKey,
-			cfg.SecretKey,
-			cfg.SessionToken,
-		)
-		options = append(options, config.WithCredentialsProvider(credProvider))
-		credSource = "static"
-	}
+	logger.Debug("Storage config values", storagex.ArgsToFields(
+		"access_key_set", cfg.AccessKey != "",
+		"secret_key_set", cfg.SecretKey != "",
+		"use_sdk_defaults", cfg.UseSDKDefaults,
+		"endpoint", cfg.Endpoint,
+		"bucket", cfg.Bucket,
+	)...)
 
-	// Profile
-	if cfg.Profile != "" {
-		options = append(options, config.WithSharedConfigProfile(cfg.Profile))
-		if credSource == "unknown" {
+	// Credential handling based on UseSDKDefaults flag
+	if !cfg.UseSDKDefaults {
+		// When UseSDKDefaults is false, only use explicitly provided credentials
+		if cfg.AccessKey != "" && cfg.SecretKey != "" {
+			credProvider := credentials.NewStaticCredentialsProvider(
+				cfg.AccessKey,
+				cfg.SecretKey,
+				cfg.SessionToken,
+			)
+			options = append(options, config.WithCredentialsProvider(credProvider))
+			credSource = "static"
+		} else if cfg.Profile != "" {
+			options = append(options, config.WithSharedConfigProfile(cfg.Profile))
+			credSource = "profile"
+		} else {
+			return aws.Config{}, credSource, fmt.Errorf("UseSDKDefaults is false but no explicit credentials provided (access_key/secret_key or profile)")
+		}
+	} else {
+		// When UseSDKDefaults is true, prefer explicit credentials but allow SDK defaults as fallback
+		if cfg.AccessKey != "" && cfg.SecretKey != "" {
+			credProvider := credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken)
+			options = append(options, config.WithCredentialsProvider(credProvider))
+			credSource = "static"
+		} else if cfg.Profile != "" {
+			options = append(options, config.WithSharedConfigProfile(cfg.Profile))
 			credSource = "profile"
 		}
+		// If no explicit credentials, loader will use SDK default chain
 	}
 
 	// Configure retries with exponential backoff
