@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -40,6 +41,12 @@ func NewS3Storage(ctx context.Context, cfg *storagex.Config, opts ...storagex.Op
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client manager: %w", err)
+	}
+
+	if config.Endpoint != "" && (strings.Contains(config.Endpoint, "localhost") || strings.Contains(config.Endpoint, "127.0.0.1")) {
+		if err := clientManager.CreateBucketIfNotExists(ctx); err != nil {
+			return nil, fmt.Errorf("failed to ensure bucket exists: %w", err)
+		}
 	}
 
 	storage := &S3Storage{

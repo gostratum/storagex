@@ -21,6 +21,10 @@ func ValidateConfig(cfg *Config) error {
 	if cfg == nil {
 		return &ValidationError{Field: "config", Message: "configuration cannot be nil"}
 	}
+	// Apply sanitization/defaults so callers that construct a Config literal
+	// without filling every field will get sensible defaults before validation.
+	// Note: Sanitize returns a copy and does not mutate the original.
+	cfg = cfg.Sanitize()
 
 	var errors []string
 

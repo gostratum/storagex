@@ -16,9 +16,6 @@ import (
 )
 
 func TestS3Integration(t *testing.T) {
-	if os.Getenv("RUN_INTEGRATION_TESTS") != "true" {
-		t.Skip("Skipping integration tests - set RUN_INTEGRATION_TESTS=true to run")
-	}
 
 	// Build config directly from environment variables
 	// This is a standalone test, not using FX, so we construct config manually
@@ -29,6 +26,7 @@ func TestS3Integration(t *testing.T) {
 		Endpoint:       getEnvOrDefault("STRATUM_STORAGE_ENDPOINT", ""),
 		AccessKey:      getEnvOrDefault("STRATUM_STORAGE_ACCESS_KEY", ""),
 		SecretKey:      getEnvOrDefault("STRATUM_STORAGE_SECRET_KEY", ""),
+		UseSDKDefaults: getEnvOrDefault("STRATUM_STORAGE_USE_SDK_DEFAULTS", "true") == "true",
 		UsePathStyle:   getEnvOrDefault("STRATUM_STORAGE_USE_PATH_STYLE", "false") == "true",
 		DisableSSL:     getEnvOrDefault("STRATUM_STORAGE_DISABLE_SSL", "false") == "true",
 		EnableLogging:  getEnvOrDefault("STRATUM_STORAGE_ENABLE_LOGGING", "false") == "true",

@@ -97,11 +97,6 @@ func NewClientManager(ctx context.Context, clientConfig ClientConfig) (*ClientMa
 		logger:        logger,
 	}
 
-	// Validate connectivity
-	if err := manager.validateConnection(ctx); err != nil {
-		return nil, fmt.Errorf("failed to validate S3 connection: %w", err)
-	}
-
 	logger.Info("S3 client manager created successfully", storagex.ArgsToFields(
 		"bucket", cfg.Bucket,
 		"region", cfg.Region,
@@ -268,26 +263,6 @@ func createBackoffStrategy(cfg *storagex.Config) retry.BackoffDelayerFunc {
 
 		return delay, nil
 	}
-}
-
-// validateConnection performs a basic connectivity check
-func (cm *ClientManager) validateConnection(ctx context.Context) error {
-	// Try to head the bucket to verify access and connectivity
-	_, err := cm.s3Client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(cm.config.Bucket),
-	})
-
-	if err != nil {
-		cm.logger.Warn("Failed to validate bucket access", storagex.ArgsToFields(
-			"bucket", cm.config.Bucket,
-			"error", err,
-		)...)
-		return fmt.Errorf("cannot access bucket %q: %w", cm.config.Bucket, err)
-	}
-
-	cm.logger.Debug("Bucket access validated", storagex.ArgsToFields("bucket", cm.config.Bucket)...)
-
-	return nil
 }
 
 // GetS3Client returns the configured S3 client

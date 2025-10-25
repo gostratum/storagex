@@ -64,7 +64,7 @@ func TestLocalstackS3Basic(t *testing.T) {
 	defer s.Close()
 
 	// Attempt to create bucket via client manager
-	cm := s.(*S3Storage).client
+	cm := s.client
 	if err := cm.CreateBucketIfNotExists(ctx); err != nil {
 		t.Fatalf("CreateBucketIfNotExists failed: %v", err)
 	}
