@@ -82,14 +82,14 @@ import (
     // import "github.com/gostratum/storagex/adapters/s3"
     //
     // fx.New(
-    //     storagex.Module,
+    //     storagex.Module(),
     //     s3.Module(),
     // )
 )
 
 func main() {
     app := fx.New(
-        storagex.Module,
+        storagex.Module(),
         fx.Invoke(useStorage),
     )
     
@@ -499,7 +499,7 @@ func main() {
     c.Set("storagex.bucket", "my-test-bucket")
 
     app := fx.New(
-        storagex.Module,
+        storagex.Module(),
         fx.Invoke(useStorage),
     )
     // ...
@@ -585,7 +585,7 @@ func main() {
     c.Set("storagex.bucket", "custom-bucket")
 
     app := fx.New(
-        storagex.Module,
+        storagex.Module(),
         storagex.WithCustomLogger(customLogger),
         fx.Invoke(useStorage),
     )

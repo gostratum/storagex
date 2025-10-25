@@ -20,7 +20,7 @@ import (
 func main() {
 	// Create the Fx application
 	app := fx.New(
-		storagex.Module,
+		storagex.Module(),
 		s3.Module(),
 		fx.Invoke(func(storage storagex.Storage) { runDemo(storage) }),
 	)

@@ -9,14 +9,40 @@ import (
 	"go.uber.org/fx"
 )
 
-// Module is the Fx module that provides storage functionality
-var Module = fx.Module("storage",
-	fx.Provide(
-		NewConfig,
-		NewKeyBuilder,
-	),
-	fx.Invoke(registerLifecycle),
-)
+// Module provides the storage module for fx.
+// This base module provides configuration and key builder, but does NOT include
+// a concrete storage provider. You must include an adapter module (e.g.,
+// s3.Module()) to get a working Storage implementation.
+//
+// Example usage:
+//
+//	app := core.New(
+//	    storagex.Module(),
+//	    s3.Module(),  // Include the S3 adapter
+//	    fx.Invoke(func(storage storagex.Storage) {
+//	        // Use storage...
+//	    }),
+//	)
+func Module(opts ...Option) fx.Option {
+	// Apply options to determine configuration overrides
+	var options Options
+	for _, opt := range opts {
+		opt(&options)
+	}
+
+	providers := []fx.Option{
+		fx.Provide(
+			NewConfig,
+			NewKeyBuilder,
+		),
+	}
+
+	// Only register lifecycle if storage is available
+	// (when an adapter module is included)
+	providers = append(providers, fx.Invoke(registerLifecycleIfAvailable))
+
+	return fx.Module("storage", providers...)
+}
 
 // StorageParams defines the parameters needed for storage creation
 type StorageParams struct {
@@ -76,12 +102,21 @@ type LifecycleParams struct {
 	fx.In
 
 	Lifecycle fx.Lifecycle
-	Storage   Storage
+	Storage   Storage     `optional:"true"` // Optional: only present when adapter is included
 	Logger    logx.Logger `optional:"true"`
 }
 
-// registerLifecycle registers shutdown hooks for graceful cleanup
-func registerLifecycle(params LifecycleParams) {
+// registerLifecycleIfAvailable registers shutdown hooks for graceful cleanup
+// when a storage implementation is available (i.e., when an adapter module is included)
+func registerLifecycleIfAvailable(params LifecycleParams) {
+	if params.Storage == nil {
+		// No storage implementation available - skip lifecycle registration
+		if params.Logger != nil {
+			params.Logger.Debug("StorageX module loaded without storage adapter")
+		}
+		return
+	}
+
 	params.Lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if params.Logger != nil {
@@ -179,7 +214,7 @@ func NewModuleWithOptions(opts ModuleOptions) fx.Option {
 
 	// Add lifecycle management unless disabled
 	if !opts.DisableLifecycle {
-		providers = append(providers, fx.Invoke(registerLifecycle))
+		providers = append(providers, fx.Invoke(registerLifecycleIfAvailable))
 	}
 
 	return fx.Module("storage", providers...)
