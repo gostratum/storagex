@@ -8,18 +8,16 @@ import (
 	"log"
 	"time"
 
-	"go.uber.org/fx"
-
+	"github.com/gostratum/core"
 	"github.com/gostratum/core/logx"
 	"github.com/gostratum/storagex"
-
-	// Import S3 implementation to register it
 	"github.com/gostratum/storagex/adapters/s3"
+	"go.uber.org/fx"
 )
 
 func main() {
 	// Create the Fx application
-	app := fx.New(
+	app := core.New(
 		storagex.Module(),
 		s3.Module(),
 		fx.Invoke(func(storage storagex.Storage) { runDemo(storage) }),

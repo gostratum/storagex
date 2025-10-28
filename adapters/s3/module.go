@@ -15,7 +15,7 @@ import (
 // Consumers should opt-in this module explicitly (e.g. s3.Module()) instead
 // of relying on package init side-effects.
 func Module() fx.Option {
-	return fx.Module("storage-s3",
+	return fx.Module("storagex-s3",
 		fx.Provide(
 			provideS3Storage,
 		),
