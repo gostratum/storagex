@@ -7,6 +7,7 @@ import (
 
 	"github.com/gostratum/core/logx"
 	"github.com/gostratum/storagex"
+	"github.com/gostratum/storagex/internal/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
@@ -61,7 +62,7 @@ func (m *mockStorage) PresignPut(ctx context.Context, key string, opts *storagex
 func TestModuleLifecycleProvidesStorage(t *testing.T) {
 	app := fxtest.New(t,
 		fx.Options(
-			storagex.TestModule,
+			testutil.TestModule,
 			fx.Provide(func() storagex.Storage { return &mockStorage{} }),
 			fx.Provide(func() logx.Logger { return logx.NewNoopLogger() }),
 		),
