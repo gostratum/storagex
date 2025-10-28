@@ -25,32 +25,6 @@ func WithLogger(logger logx.Logger) Option {
 	}
 }
 
-// WithLogxLogger allows passing a core/logx.Logger directly. This is a
-// lightweight migration helper for callers still constructing Storage
-// imperatively; prefer providing `logx.Logger` via FX DI and using
-// WithLogger.
-func WithLogxLogger(l any) Option {
-	return func(opts *Options) {
-		if lx, ok := l.(logx.Logger); ok {
-			opts.logger = lx
-		}
-	}
-}
-
-// WithCoreLogger is a convenience wrapper to accept a core logger. The
-// storagex module now uses `core/logx.Logger` directly; prefer passing a
-// `logx.Logger` explicitly via WithLogger or via FX DI. This helper will
-// accept a `logx.Logger` value and use it if provided.
-func WithCoreLogger(l any) Option {
-	return func(opts *Options) {
-		// If the provided logger matches the expected coreLogger interface,
-		// wrap it. Otherwise, ignore and leave the default logger.
-		if lx, ok := l.(logx.Logger); ok {
-			opts.logger = lx
-		}
-	}
-}
-
 // WithKeyBuilder sets a custom key building strategy
 func WithKeyBuilder(kb KeyBuilder) Option {
 	return func(opts *Options) {

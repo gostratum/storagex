@@ -69,25 +69,6 @@ func NewConfig(loader configx.Loader) (*Config, error) {
 	return cfg, nil
 }
 
-// NewStorage creates a new Storage implementation.
-//
-// NOTE: storagex does not include built-in provider implementations. You must
-// include an adapter module (for example, `github.com/gostratum/storagex/adapters/s3.Module()`)
-// in your FX application or construct a provider directly (for example,
-// `adapters/s3.NewS3Storage`). This function previously relied on a global
-// provider registration (deprecated); that pattern has been removed.
-func NewStorage(params StorageParams) (Storage, error) {
-	return nil, fmt.Errorf("no storage implementation registered - include an adapter module (e.g. s3.Module()) or construct a provider directly")
-}
-
-// NewStorageFromParams creates a new Storage implementation using the provided
-// context. This allows callers to control cancellation and timeouts during
-// storage initialization. Providers should prefer this constructor when they
-// need to run network requests or long-running setup during creation.
-func NewStorageFromParams(ctx context.Context, params StorageParams) (Storage, error) {
-	return nil, fmt.Errorf("no storage implementation registered - include an adapter module (e.g. s3.Module()) or construct a provider directly")
-}
-
 // NewKeyBuilder creates a default key builder from configuration
 func NewKeyBuilder(cfg *Config) KeyBuilder {
 	if cfg.BasePrefix == "" {
@@ -173,51 +154,11 @@ func NewTestKeyBuilder() KeyBuilder {
 	return NewPrefixKeyBuilder("test")
 }
 
-// WithCustomKeyBuilder provides a custom key builder to the DI container
-func WithCustomKeyBuilder(kb KeyBuilder) fx.Option {
-	return fx.Supply(kb)
-}
-
-// WithCustomLogger provides a custom logger to the DI container
-func WithCustomLogger(logger logx.Logger) fx.Option {
-	return fx.Supply(logger)
-}
-
 // WithCustomStorage provides a concrete Storage instance to the FX graph.
 // Useful for tests or for applications that construct storage outside of
 // adapter modules.
 func WithCustomStorage(s Storage) fx.Option {
 	return fx.Supply(s)
-}
-
-// ModuleOptions allows customization of the storage module
-type ModuleOptions struct {
-	// DisableLifecycle disables automatic lifecycle management
-	DisableLifecycle bool
-
-	// CustomProviders allows adding custom providers to the module
-	CustomProviders []fx.Option
-}
-
-// NewModuleWithOptions creates a customized storage module
-func NewModuleWithOptions(opts ModuleOptions) fx.Option {
-	providers := []fx.Option{
-		fx.Provide(
-			NewConfig,
-			NewStorage,
-			NewKeyBuilder,
-		),
-	}
-
-	// Add custom providers
-	providers = append(providers, opts.CustomProviders...)
-
-	// Add lifecycle management unless disabled
-	if !opts.DisableLifecycle {
-		providers = append(providers, fx.Invoke(registerLifecycleIfAvailable))
-	}
-
-	return fx.Module("storagex", providers...)
 }
 
 // Example usage documentation
@@ -283,9 +224,3 @@ For testing:
 		// ...
 	}
 */
-
-// NewStorageFromConfig creates a storage instance directly from configuration
-// This is useful for testing and simple cases that don't need full DI
-func NewStorageFromConfig(ctx context.Context, cfg *Config, opts ...Option) (Storage, error) {
-	return nil, fmt.Errorf("no storage implementation registered - include an adapter (e.g. s3.Module()) or construct a provider directly")
-}
