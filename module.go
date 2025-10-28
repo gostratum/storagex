@@ -6,6 +6,8 @@ import (
 
 	"github.com/gostratum/core/configx"
 	"github.com/gostratum/core/logx"
+	"github.com/gostratum/metricsx"
+	"github.com/gostratum/tracingx"
 	"go.uber.org/fx"
 )
 
@@ -28,6 +30,7 @@ func Module() fx.Option {
 		fx.Provide(
 			NewConfig,
 			NewKeyBuilder,
+			NewObservabilityInstrumenter, // Provide optional observability
 		),
 	}
 
@@ -70,6 +73,19 @@ func NewKeyBuilder(cfg *Config) KeyBuilder {
 	}
 
 	return NewPrefixKeyBuilder(cfg.BasePrefix)
+}
+
+// ObservabilityDeps defines optional observability dependencies
+type ObservabilityDeps struct {
+	fx.In
+
+	Metrics metricsx.Metrics `optional:"true"`
+	Tracer  tracingx.Tracer  `optional:"true"`
+}
+
+// NewObservabilityInstrumenter creates an instrumenter for storage operations
+func NewObservabilityInstrumenter(deps ObservabilityDeps) *Instrumenter {
+	return NewInstrumenter(deps.Metrics, deps.Tracer)
 }
 
 // LifecycleParams defines parameters for lifecycle management
