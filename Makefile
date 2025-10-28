@@ -50,12 +50,17 @@ logs-minio: ## Show MinIO logs
 # Code quality
 fmt: ## Format code
 	go fmt ./...
-	@command -v goimports >/dev/null 2>&1 && goimports -w . || echo "goimports not installed; run 'make install-tools'"
+	@if [ -x "$$(go env GOPATH)/bin/goimports" ]; then \
+		"$$(go env GOPATH)/bin/goimports" -w .; \
+	elif command -v goimports >/dev/null 2>&1; then \
+		goimports -w .; \
+	else \
+		echo "goimports not installed; run 'make install-tools'"; \
+	fi
 
 lint: ## Run linter (golangci-lint)
-	@GOLANGCI_BIN=$(go env GOPATH)/bin/golangci-lint; \
-	if [ -x "$$GOLANGCI_BIN" ]; then \
-		"$$GOLANGCI_BIN" run ./...; \
+	@if [ -x "$$(go env GOPATH)/bin/golangci-lint" ]; then \
+		"$$(go env GOPATH)/bin/golangci-lint" run ./...; \
 	elif command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run ./...; \
 	else \
@@ -129,11 +134,9 @@ env-aws: ## Print environment exports for AWS S3
 # Install development tools
 install-tools: ## Install development tools used by the project
 	@echo "Installing development tools..."
-	@command -v goimports >/dev/null 2>&1 || \ 
-		(go install golang.org/x/tools/cmd/goimports@latest)
-	@command -v golangci-lint >/dev/null 2>&1 || \ 
-		(go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
-	@echo "Tools installed (may need to add $(go env GOPATH)/bin to PATH)"
+	@command -v goimports >/dev/null 2>&1 || go install golang.org/x/tools/cmd/goimports@latest
+	@command -v golangci-lint >/dev/null 2>&1 || go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@echo "Tools installed (may need to add $$(go env GOPATH)/bin to PATH)"
 
 # Reset test data in MinIO
 reset-test-data: ## Reset test data in MinIO (requires MinIO running via docker compose)
