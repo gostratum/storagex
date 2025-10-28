@@ -23,13 +23,7 @@ import (
 //	        // Use storage...
 //	    }),
 //	)
-func Module(opts ...Option) fx.Option {
-	// Apply options to determine configuration overrides
-	var options Options
-	for _, opt := range opts {
-		opt(&options)
-	}
-
+func Module() fx.Option {
 	providers := []fx.Option{
 		fx.Provide(
 			NewConfig,
