@@ -122,32 +122,6 @@ func registerLifecycleIfAvailable(params LifecycleParams) {
 	})
 }
 
-// TestModule provides a module for testing with mock/test implementations
-var TestModule = fx.Module("storagex-test",
-	fx.Provide(
-		NewTestConfig,
-		NewTestKeyBuilder,
-	),
-)
-
-// NewTestConfig creates a test configuration
-func NewTestConfig() *Config {
-	cfg := DefaultConfig()
-	cfg.Bucket = "test-bucket"
-	cfg.Endpoint = "http://localhost:9000"
-	cfg.UsePathStyle = true
-	cfg.AccessKey = "minioadmin"
-	cfg.SecretKey = "minioadmin"
-	cfg.DisableSSL = true
-	cfg.EnableLogging = true
-	return cfg
-}
-
-// NewTestKeyBuilder creates a test key builder
-func NewTestKeyBuilder() KeyBuilder {
-	return NewPrefixKeyBuilder("test")
-}
-
 // WithCustomStorage provides a concrete Storage instance to the FX graph.
 // Useful for tests or for applications that construct storage outside of
 // adapter modules.
@@ -207,11 +181,13 @@ With custom configuration:
 
 For testing:
 
+	import "github.com/gostratum/storagex/internal/testutil"
+
 	func TestMyApp(t *testing.T) {
 		app := fx.New(
-			storagex.TestModule,
-			fx.Invoke(func(storage storagex.Storage) {
-				// Test with MinIO
+			testutil.TestModule,
+			fx.Invoke(func(cfg *storagex.Config) {
+				// Use test configuration
 			}),
 		)
 
