@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/gostratum/core"
@@ -16,64 +15,51 @@ import (
 )
 
 func main() {
-	// Create the Fx application
+	// Create the Fx application with proper dependency injection
 	app := core.New(
 		storagex.Module(),
 		s3.Module(),
-		fx.Invoke(func(storage storagex.Storage) { runDemo(storage) }),
+		fx.Invoke(runDemo),
 	)
 
-	// Start the application
-	ctx := context.Background()
-	if err := app.Start(ctx); err != nil {
-		log.Fatal("Failed to start application:", err)
-	}
-
-	// Graceful shutdown
-	defer func() {
-		if err := app.Stop(ctx); err != nil {
-			log.Println("Error stopping application:", err)
-		}
-	}()
-
-	// Keep the application running for a bit to see the demo
-	time.Sleep(2 * time.Second)
+	app.Run()
 }
 
-// runDemo demonstrates all storage operations
-func runDemo(storage storagex.Storage) {
-	ctx := context.Background()
+// runDemo demonstrates all storage operations with proper DI
+func runDemo(lc fx.Lifecycle, storage storagex.Storage, logger logx.Logger) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			logger.Info("Starting StorageX demo")
 
-	// The module no longer wires a logger provider automatically.
-	// Use a no-op logger for the demo to keep output quiet.
-	logger := logx.NewNoopLogger()
-	logger.Info("Starting StorageX demo")
+			// Demonstrate basic operations
+			if err := demonstrateBasicOps(ctx, storage, logger); err != nil {
+				logger.Error("Basic operations demo failed", storagex.ArgsToFields("error", err)...)
+				return err
+			}
 
-	// Demonstrate basic operations
-	if err := demonstrateBasicOps(ctx, storage, logger); err != nil {
-		logger.Error("Basic operations demo failed", storagex.ArgsToFields("error", err)...)
-		return
-	}
+			// Demonstrate multipart upload
+			if err := demonstrateMultipartUpload(ctx, storage, logger); err != nil {
+				logger.Error("Multipart upload demo failed", storagex.ArgsToFields("error", err)...)
+				return err
+			}
 
-	// Demonstrate multipart upload
-	if err := demonstrateMultipartUpload(ctx, storage, logger); err != nil {
-		logger.Error("Multipart upload demo failed", storagex.ArgsToFields("error", err)...)
-		return
-	}
+			// Demonstrate presigned URLs
+			if err := demonstratePresignedURLs(ctx, storage, logger); err != nil {
+				logger.Error("Presigned URLs demo failed", storagex.ArgsToFields("error", err)...)
+				return err
+			}
 
-	// Demonstrate presigned URLs
-	if err := demonstratePresignedURLs(ctx, storage, logger); err != nil {
-		logger.Error("Presigned URLs demo failed", storagex.ArgsToFields("error", err)...)
-		return
-	}
+			// Demonstrate batch operations
+			if err := demonstrateBatchOps(ctx, storage, logger); err != nil {
+				logger.Error("Batch operations demo failed", storagex.ArgsToFields("error", err)...)
+				return err
+			}
 
-	// Demonstrate batch operations
-	if err := demonstrateBatchOps(ctx, storage, logger); err != nil {
-		logger.Error("Batch operations demo failed", storagex.ArgsToFields("error", err)...)
-		return
-	}
-
-	logger.Info("StorageX demo completed successfully")
+			logger.Info("StorageX demo completed successfully")
+			logger.Info("Press Ctrl+C to exit")
+			return nil
+		},
+	})
 }
 
 // demonstrateBasicOps shows basic CRUD operations
