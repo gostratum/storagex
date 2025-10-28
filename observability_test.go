@@ -389,3 +389,40 @@ func TestRecordPresignOperation(t *testing.T) {
 		assert.Equal(t, 1.0, metrics.counters["storage_presign_operations_total:put"])
 	})
 }
+
+func TestAddSpanAttribute(t *testing.T) {
+	t.Run("adds attribute to active span in context", func(t *testing.T) {
+		tracer := newMockTracer()
+		instrumenter := NewInstrumenter(nil, tracer)
+
+		ctx := context.Background()
+		ctx, span := tracer.Start(ctx, "test-operation")
+		ctx = tracingx.ContextWithSpan(ctx, span)
+
+		// Add attributes to the span via context
+		instrumenter.AddSpanAttribute(ctx, "custom.key", "custom-value")
+		instrumenter.AddSpanAttribute(ctx, "custom.count", 42)
+
+		// Verify attributes were set
+		mockSpan := span.(*mockSpan)
+		assert.Equal(t, "custom-value", mockSpan.tags["custom.key"])
+		assert.Equal(t, 42, mockSpan.tags["custom.count"])
+	})
+
+	t.Run("no-op when no tracer", func(t *testing.T) {
+		instrumenter := NewInstrumenter(nil, nil)
+		ctx := context.Background()
+
+		// Should not panic
+		instrumenter.AddSpanAttribute(ctx, "key", "value")
+	})
+
+	t.Run("no-op when no span in context", func(t *testing.T) {
+		tracer := newMockTracer()
+		instrumenter := NewInstrumenter(nil, tracer)
+		ctx := context.Background()
+
+		// Should not panic when there's no span in context
+		instrumenter.AddSpanAttribute(ctx, "key", "value")
+	})
+}

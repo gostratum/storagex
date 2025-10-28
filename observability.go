@@ -150,8 +150,13 @@ func (i *Instrumenter) RecordPresignOperation(operation string) {
 
 // AddSpanAttribute adds an attribute to the current span if tracing is enabled
 func (i *Instrumenter) AddSpanAttribute(ctx context.Context, key string, value any) {
-	if i.tracer != nil {
-		// The tracer provides access to the current span via the context
-		// This is a simplified version - actual implementation depends on tracingx internals
+	if i.tracer == nil {
+		return
+	}
+
+	// Extract the current span from context
+	span := tracingx.SpanFromContext(ctx)
+	if span != nil {
+		span.SetTag(key, value)
 	}
 }
