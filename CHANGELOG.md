@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.2.1] - 2025-10-31
+
+### Added
+- Release version 0.2.1
+
+### Changed
+- Updated gostratum dependencies to latest versions
+
+
 ### Changed
 - **Config.Sanitize()** now properly redacts secrets and returns `any` to implement `logx.Sanitizable` interface
   - This enables automatic secret sanitization when logging with `logx.Any()`
