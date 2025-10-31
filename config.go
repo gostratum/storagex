@@ -112,8 +112,7 @@ func NewConfigFromLoader(loader interface {
 		return nil, err
 	}
 
-	// Sanitize and validate
-	cfg = cfg.Sanitize()
+	// Validate the config (which applies defaults internally)
 	if err := ValidateConfig(cfg); err != nil {
 		return nil, err
 	}

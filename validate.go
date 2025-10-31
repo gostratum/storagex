@@ -21,10 +21,9 @@ func ValidateConfig(cfg *Config) error {
 	if cfg == nil {
 		return &ValidationError{Field: "config", Message: "configuration cannot be nil"}
 	}
-	// Apply sanitization/defaults so callers that construct a Config literal
+	// Apply defaults so callers that construct a Config literal
 	// without filling every field will get sensible defaults before validation.
-	// Note: Sanitize returns a copy and does not mutate the original.
-	cfg = cfg.Sanitize()
+	cfg = applyConfigDefaults(cfg)
 
 	var errors []string
 
@@ -280,10 +279,9 @@ func validateBasePrefix(prefix string) error {
 	return nil
 }
 
-// SanitizeConfig applies automatic fixes to configuration where possible
-// Sanitize applies automatic fixes to configuration where possible and returns
-// a sanitized copy without mutating the receiver.
-func (cfg *Config) Sanitize() *Config {
+// applyConfigDefaults applies default values to configuration where possible and returns
+// a copy without mutating the receiver.
+func applyConfigDefaults(cfg *Config) *Config {
 	if cfg == nil {
 		return DefaultConfig()
 	}
@@ -333,6 +331,33 @@ func (cfg *Config) Sanitize() *Config {
 	// Clean up base prefix
 	if sanitized.BasePrefix != "" {
 		sanitized.BasePrefix = strings.Trim(sanitized.BasePrefix, "/")
+	}
+
+	return &sanitized
+}
+
+// Sanitize returns a copy of the Config with secret fields redacted.
+// This implements the logx.Sanitizable interface for automatic sanitization when logging.
+func (cfg *Config) Sanitize() any {
+	if cfg == nil {
+		return (*Config)(nil)
+	}
+
+	// Create a copy to avoid mutating the original
+	sanitized := *cfg
+
+	// Redact secrets
+	if sanitized.AccessKey != "" {
+		sanitized.AccessKey = "[redacted]"
+	}
+	if sanitized.SecretKey != "" {
+		sanitized.SecretKey = "[redacted]"
+	}
+	if sanitized.SessionToken != "" {
+		sanitized.SessionToken = "[redacted]"
+	}
+	if sanitized.ExternalID != "" {
+		sanitized.ExternalID = "[redacted]"
 	}
 
 	return &sanitized

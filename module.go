@@ -57,8 +57,7 @@ func NewConfig(loader configx.Loader) (*Config, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Sanitize and validate
-	cfg = cfg.Sanitize()
+	// Validate the config (which applies defaults internally)
 	if err := ValidateConfig(cfg); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}

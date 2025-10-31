@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Config.Sanitize()** now properly redacts secrets and returns `any` to implement `logx.Sanitizable` interface
+  - This enables automatic secret sanitization when logging with `logx.Any()`
+  - Secrets (AccessKey, SecretKey, SessionToken, ExternalID) are automatically redacted when configs are logged
+  - **BREAKING:** Previous `Sanitize()` only applied defaults; new implementation redacts secrets
+  - **BREAKING:** Return type changed from `*Config` to `any`; add type assertion if needed: `sanitized := cfg.Sanitize().(*Config)`
+  - Created new `applyConfigDefaults()` internal function for applying defaults (used by `ValidateConfig`)
+  - Tests added to verify `Sanitizable` interface compliance
 
 ## [0.2.0] - 2025-10-29
 

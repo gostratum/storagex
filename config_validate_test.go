@@ -63,8 +63,7 @@ func TestValidateConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.cfg.Sanitize()
-			err := ValidateConfig(cfg)
+			err := ValidateConfig(tt.cfg)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("ValidateConfig() error = %v, wantErr %v", err, tt.wantErr)
 			}
